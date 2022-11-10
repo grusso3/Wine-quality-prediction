@@ -1,0 +1,20 @@
+# Introduction
+
+```{r, echo = FALSE, message = FALSE, warning=FALSE}
+source(here::here("scripts/setup.R"))
+```
+
+As part of the Machine Learning in Business Analytics course taught at HEC Lausanne by Professor Marc-Olivier Boldi, we had a lot of fun doing the following project: Machine Learning at the service of the vineyard. 
+
+But how did we get the idea? When we had to decide on a common idea, the choice was difficult due to our various passions. Therefore, it was not easy to agree on an idea that could get us all excited about a common project especially since this project has always been valuable to everyone. It is thus during one of those warm evenings all together that this project was born. Something special brought us together: an excellent bottle of red wine. 
+
+We were not doing anything new though. The history of wine is not new either. Since ancient times and even before, wine has accompanied the development of our civilization. Wine already represented conviviality, wealth and even power.
+
+Furthermore, like many other fields the wine world is a sector already strongly impacted by artificial intelligence. Whether it is through technologies dedicated to the production or the evaluation of the quality of the product. 
+We therefore saw this as an excellent opportunity to apply our newly developed skills to deepen the analysis of wine quality, a field (i.e., wine tasting) in which we had little technical knowledge. We also wanted to bring a business perspective on how our project could be applied in the future. 
+
+Contrary to what one might think, the wine industry is constantly improving. At present, innovation is aimed at responding to environmental, quality, market, and traceability issues, which are ever-increasing concerns for consumers.
+To the delight of wine lovers, many applications and physical products have emerged to further enhance the taste experience of a wine tasting. Thus, many startups have emerged in the last five years, even seeing the emergence of a new movement, WineTech. On the other hand, many of these startups have also closed since the wine world is still perceived as conservative.
+The emergence of digital technologies, artificial intelligence, Big Data, and many others are therefore responsible for recent and future developments in the industry.
+
+Although we are aware that this project is rather popular and therefore not new, we decided to innovate with the many different models of supervised and unsupervised learning we used and their comparison which allowed us to extract value from our data as you will discover later.

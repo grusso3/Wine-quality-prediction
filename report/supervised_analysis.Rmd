@@ -1,0 +1,1247 @@
+# Supervised Learning Models
+
+```{r, echo = FALSE, message = FALSE, warning = FALSE}
+source(here::here("scripts/setup.R"))
+```
+
+```{r, echo = FALSE, include=FALSE}
+#RED
+
+set.seed(123)
+R.knn <- knn3(R.tr[,-c(12,13)], R.tr$qlty.cat, k = 2)
+R.knn.pred <- predict(R.knn, newdata = R.te[,-c(12,13)], type="class")
+
+confusionMatrix(data = as.factor(R.te$qlty.cat),
+                reference = as.factor(R.knn.pred))
+
+R.knn.prob <- predict(R.knn, newdata = R.te[,-c(12,13)], type="prob")
+
+
+#WHITE
+set.seed(123)
+W.knn <- knn3(W.tr[,-c(12,13)], W.tr$qlty.cat, k = 3)
+W.knn.pred <- predict(W.knn, newdata = W.te[,-c(12,13)], type="class")
+
+confusionMatrix(data = as.factor(W.te$qlty.cat),
+                reference = as.factor(W.knn.pred))
+W.knn.prob <- predict(W.knn, newdata = W.te[,-c(12,13)], type="prob")
+
+# Using KNN as regression to predict quality score (3 to 9)
+
+# RED
+
+R.knnreg <- knnreg(R.tr[, -13], as.numeric(R.tr$quality), k=3)
+R.knnreg.pred <- predict(R.knnreg, newdata=R.te[, -13])
+
+R.te %>% mutate(pred=R.knnreg.pred) %>%
+  ggplot(aes(x=quality, y=pred)) + 
+  geom_point() + geom_abline(slope=1, intercept = 0, color = "red")
+
+# WHITE
+
+W.knnreg <- knnreg(W.tr[, -13], as.numeric(W.tr$quality), k=3)
+W.knnreg.pred <- predict(W.knnreg, newdata=W.te[, -13])
+
+W.te %>% mutate(pred=W.knnreg.pred) %>%
+  ggplot(aes(x=quality, y=pred)) + 
+  geom_point() + geom_abline(slope=1, intercept = 0, color = "red")
+```
+
+In this section, we Will apply 5 Super Machine Learning Models to check their accuracy both on Red and WHite wine quality. 
+We will also be applying Categorical(binary) classification as well as discrete numerical models where applicable. 
+
+We will briefly describe our use of each model before concluding with our model scores and proceeding to tuning our models.
+
+**Categorical Quality Prediction**
+We will derive the prediction accuracy and probability outcome for each of our models.
+Below we will describe Each model and our approach in its use in order to reach the final Summary table with Accuracy Score for each wine dataset.
+
+**Numerical discrete quality prediction**
+For our regressions and numerical classifications we will be visually showing results of our models used and will also score using technical accuracy measures these models in the scoring section before tuning some of them.
+
+### KNN
+
+#### Binary Categorical KNN on Quality category
+
+We ran a KNN model using Trial and Error in order to check the best accuracy under different K assumptions. We concluded with a K=2 for both Red and White datasets.
+
+Although more details are available in the summary stat table but our red Wine dataset has more than 80% accuracy and White Wine around 77%.
+
+#### Numerical Classification under KNN regression
+
+Also using K=2, we ran a KNN regression on the numerical quality and plotted the results to be able to see the visual accuracy
+
+```{r, echo = FALSE,include=TRUE, warning=FALSE}
+grid.arrange((
+R.te %>% mutate(pred=R.knnreg.pred) %>%
+  ggplot(aes(x=quality, y=pred)) + 
+   geom_point() + geom_abline(slope=1, intercept = 0, color = "red") + 
+  labs(x = "Quality", y = "Predicted quality", title = "Predicted vs. Actual - Red") + 
+  theme(legend.position = 'none', plot.title = element_text(size = 9, hjust=0.5, face="bold"))
+
+),
+W.te %>% mutate(pred=W.knnreg.pred) %>%
+  ggplot(aes(x=quality, y=pred)) + 
+  geom_point() + geom_abline(slope=1, intercept = 0, color = "red") + 
+  labs(x = "Quality", y = "Predicted quality", title = "Predicted vs. Actual - White") + 
+  theme(legend.position = 'none', plot.title = element_text(size = 9, hjust=0.5, face="bold")), nrow=1 , ncol =2 )
+
+```
+
+**Notes on the KNN** 
+
+At first glance, KNN regression seems to be less accurate at predicting the discrete quality variable compared to the high accuracy of KNN classification.
+Moreover, we can see and observe the higher accuracy in Red Wine compared to White.
+
+
+### Naive Bayes
+```{r, echo = FALSE, include=FALSE}
+##############
+# Naive Bayes
+###############
+#RED
+
+# Conditional Density 
+
+##Without Kernel
+R.nb <- naive_bayes(qlty.cat ~ .,
+                      data = R.tr[,-12], usekernel=FALSE)
+par(mfrow=c(3,3))
+plot(R.nb, arg.num = list(col = 1:3,
+                            legend.position = "topright",
+                            legend.cex = 0.8),
+     prob="conditional")
+par(mfrow=c(1,1))
+
+R.nb
+
+#with kernel
+R.nbkrnl <- naive_bayes(qlty.cat ~ .,
+                       data = R.tr[,-12], usekernel=T) 
+par(mfrow=c(3,3))
+plot(R.nbkrnl, arg.num = list(col = 1:3,
+                             legend.position = "topright",
+                             legend.cex = 0.8), prob="conditional")
+par(mfrow=c(1,1))
+
+R.nbkrnl
+
+# predictions without kernel use
+R.nb.pred <- predict(R.nb, newdata = R.te[,-(12:13)])
+confusionMatrix(data = as.factor(R.te$qlty.cat), 
+                reference = as.factor(R.nb.pred))
+
+##prediction of posterior probabilities
+R.nb.prob <- predict(R.nb, newdata = R.te[,-(12:13)], type="prob")
+
+#Using Priors to predict
+sum(Rwine$qlty.cat == "Good") # 855 good = 53.5%
+sum(Rwine$qlty.cat == "Bad")  # 744 bad  = 46.5%
+
+R.nbprior <- naive_bayes(qlty.cat ~ .,
+                       data = R.tr[,-12],
+                     usekernel=FALSE, prior = c(0.47,0.53)) 
+par(mfrow=c(3,3))
+plot(R.nbprior, arg.num = list(col = 1:3,
+                             legend.position = "topright",
+                             legend.cex = 0.8), prob="conditional")
+
+par(mfrow=c(1,1))
+
+R.nbprior.pred <- predict(R.nbprior, newdata = R.te[,-(12:13)])
+confusionMatrix(data = as.factor(R.te$qlty.cat), 
+                reference = as.factor(R.nbprior.pred))
+
+
+#WHITE
+
+# Conditional Density 
+
+##Without Kernel
+W.nb <- naive_bayes(qlty.cat ~ .,
+                    data = W.tr[,-12], usekernel=FALSE)
+par(mfrow=c(3,3))
+plot(W.nb, arg.num = list(col = 1:3,
+                          legend.position = "topright",
+                          legend.cex = 0.8),
+     prob="conditional")
+par(mfrow=c(1,1))
+
+W.nb
+
+#with kernel
+W.nbkrnl <- naive_bayes(qlty.cat ~ .,
+                        data = W.tr[,-12], usekernel=T) 
+par(mfrow=c(3,3))
+plot(W.nbkrnl, arg.num = list(col = 1:3,
+                              legend.position = "topright",
+                              legend.cex = 0.8), prob="conditional")
+par(mfrow=c(1,1))
+
+W.nbkrnl
+
+# predictions without kernel use
+W.nb.pred <- predict(W.nb, newdata = W.te[,-(12:13)])
+confusionMatrix(data = as.factor(W.te$qlty.cat), 
+                reference = as.factor(W.nb.pred))
+
+##prediction of posterior probabilities
+W.nb.prob <- predict(W.nb, newdata = W.te[,-(12:13)], type="prob")
+
+#Using Priors to predict
+sum(Wwine$qlty.cat == "Good") # 3258 good = 66.5%
+sum(Wwine$qlty.cat == "Bad")  # 1640 bad  = 33.5%
+
+W.nbprior <- naive_bayes(qlty.cat ~ .,
+                         data = W.tr[,-12],
+                         usekernel=FALSE, prior = c(0.33,0.67)) 
+par(mfrow=c(3,3))
+plot(W.nbprior, arg.num = list(col = 1:3,
+                               legend.position = "topright",
+                               legend.cex = 0.8), prob="conditional")
+
+par(mfrow=c(1,1))
+
+W.nbprior.pred <- predict(W.nbprior, newdata = W.te[,-(12:13)])
+confusionMatrix(data = as.factor(W.te$qlty.cat), 
+                reference = as.factor(W.nbprior.pred))
+```
+
+We conducted Kernel and non kernel use for Naive Bayes plotting and decided not to use kernel as the distribution functions seemed to fit well without it.
+Testing this theory we noticed that Kernel did not bring much improvement to our accuracy measures hence why the ND model we went for in our prediction is the standard one.
+Naive BAyes has been fitted to predict our Quality Category Good or Bad wine
+
+#### Naive Bayes without Kernel
+
+Using a normal Naive Bayes for both our Datasets we got a 75% and 69% accuracy for each of our Red and White sets respectively.
+
+
+#### Naive Bayes using Priors
+
+We calculated the Ratio of Good/Bad wine quality in our full data set for each of red and white to derive the ratio of Good/All and Bad/all and used them as conditional prior probabilities to fit the new NB models
+
+We get 75% and 70% for each Red and White wine respectively
+
+
+**Notes on Naive Bayes** 
+Accuracy For White wine is not satisfactory but it does however improve while using the Priori conditional probability that it takes into account the Ratio of Good to Bad Quality.
+Predicting Red Wine quality is clearly more accurate.
+One thing we do notice is low Kappa for all the model.
+
+
+### Linear-Log Regression
+```{r, echo = FALSE, include=FALSE}
+######################
+# Linear / Logistic Regression
+#####################
+
+###LINEAR REGRESSION
+
+# RED
+
+R.lm <- lm(quality~., data=R.tr[,-13])
+summary(R.lm)
+
+# stepwise regression to get bext lm model
+R.lm.step <- step(R.lm)
+summary(R.lm.step)
+
+R.lm.pred <- predict(R.lm.step, newdata= R.te[,-13])
+plot(R.te$quality ~ R.lm.pred, xlab="Prediction", ylab="Observed quality")
+abline(0,1) # line showing the obs -- pred agreement
+
+R.lm.pred[c(1,2,20,50,300)]
+
+
+# WHITE
+
+W.lm <- lm(quality~., data=W.tr[,-13])
+summary(W.lm)
+
+# stepwise regression to get bext lm model
+W.lm.step <- step(W.lm)
+summary(W.lm.step)
+
+W.lm.pred <- predict(W.lm.step, newdata= W.te[,-13])
+plot(W.te$quality ~ W.lm.pred, xlab="Prediction", ylab="Observed quality")
+abline(0,1) # line showing the obs -- pred agreement
+
+W.lm.pred[c(1,2,20,50,300,500,800)]
+
+############################
+### LOGISTIC REGRESSION
+###########################
+
+
+#RED
+
+R.glm <- glm(qlty.cat~., data=R.tr[,-12], family="binomial")
+summary(R.glm)
+
+R.glm.step <- step(R.glm)
+summary(R.glm.step)
+
+R.glm.prob <- predict(R.glm.step, newdata = R.te[,-12], type="response")
+R.glm.pred <- ifelse(R.glm.prob >= 0.5, "Good", "Bad")
+
+confusionMatrix(data = as.factor(R.te$qlty.cat),
+                reference = as.factor(R.glm.pred))
+
+boxplot(R.glm.prob~R.te$qlty.cat)
+
+
+#WHITE
+
+W.glm <- glm(qlty.cat~., data=W.tr[,-12], family="binomial")
+summary(W.glm)
+
+W.glm.step <- step(W.glm)
+summary(W.glm.step)
+
+W.glm.prob <- predict(W.glm.step, newdata = W.te[,-12], type="response")
+W.glm.pred <- ifelse(W.glm.prob >= 0.5, "Good", "Bad")
+
+confusionMatrix(data = as.factor(W.te$qlty.cat),
+                reference = as.factor(W.glm.pred))
+
+boxplot(W.glm.prob~W.te$qlty.cat)
+```
+
+We conducted a Linear regression model on the numerical quality for red and white wines using the best stepwise regression , using AIC, model.
+We used the stepwise LM model to predict and plotted the following charts:
+
+```{r, echo = FALSE, include=TRUE, warning=FALSE}
+
+par(mfrow = c(1,2))
+par(pin=c(1.8,2))              
+
+plot(R.te$quality ~ R.lm.pred, xlab="Predicted", ylab="Actual", main = "Red",col="red") + abline(0,1)
+
+
+plot(W.te$quality ~ W.lm.pred, xlab="Predicted", ylab="Actual", main = "White",col="lightblue") + abline(0,1)
+
+
+```
+
+**Notes on Linear Regression**
+We again notice that predicting numerical discrete quality shows alot of error in linear models moreso for white compared to red wine.
+
+### Logistic Regression
+
+Also using a stepwise logistic regression model we predicted our categorical Good/Bad quality for each red and white dataset with a standard cutoff point at 0.5.
+
+A 76% accuracy for our Red wine and 73% for our White wine, we also visualize the prediction 2-class tables in boxplots
+
+```{r, echo = FALSE, include=TRUE, warning=FALSE}
+par(mfrow = c(1,2))
+
+par(pin=c(1.8,2))              
+
+boxplot(R.glm.prob~R.te$qlty.cat, ylab = "Probability" , xlab = "Category", main="Red",col="red")
+boxplot(W.glm.prob~W.te$qlty.cat, ylab = "Probability" , xlab = "Category", main="White")
+```
+
+**Notes on Logistic Regression**
+Also a small bias of prediction quality towards red wine but nonetheless fair accuracy for both at the standard 0.5 cutoff threshold.
+
+
+### Classification and Regression Tree
+
+We will be using a Categorical Classification tree for Good-Bad wine and another Regression Tree to predict our Quality score.
+
+#### Classification Tree on Good/Bad Quality
+```{r, echo = FALSE, include=FALSE}
+###############
+#CART
+##############
+
+#-----------------------RED-------------------------
+
+# Classification tree fit and plot
+set.seed(123)
+R.tree <- rpart(qlty.cat ~ ., data=R.tr[,-12])
+rpart.plot(R.tree)
+
+# Pruning the tree
+
+plotcp(R.tree) # Tree can be pruned to 7 nodes with cp=0.023
+R.tree.prune <- prune(R.tree, cp = 0.014)
+rpart.plot(R.tree.prune)
+
+## using autoprune function
+
+set.seed(123)
+rpart.plot(autoprune(qlty.cat ~ ., data=R.tr[,-12])) # quite bad
+
+# Predictions
+
+R.tree.pred <- predict(R.tree.prune, newdata=R.te[,-12], type="class")
+confusionMatrix(data = as.factor(R.te$qlty.cat),
+                reference = as.factor(R.tree.pred))
+
+R.tree.prob <- predict(R.tree, newdata=R.te[,-12], type="prob")
+
+plot(R.tree.pred ~ R.te$qlty.cat,
+     xlab="Qlty", ylab="Predictions")
+
+## Regression tree using numerical quality
+
+set.seed(123)
+R.treereg <- rpart(quality ~ ., data=R.tr[,-13])
+rpart.plot(R.treereg)
+
+plotcp(R.treereg) # 4 nodes
+
+# Pruning the tree
+
+
+R.treereg.prune <- prune(R.treereg, cp=0.028)
+rpart.plot(R.treereg.prune)
+
+#Prediction of numericals
+R.treereg.pred <- predict(R.treereg.prune, newdata = R.te[,-13])
+
+plot(R.treereg.pred ~ R.te$quality,
+     xlab="Quality", ylab="Predictions",ylim = c(3,9))
+abline(0,1, col="red")
+
+
+#----------------------WHITE-------------------
+
+# Classification tree fit and plot
+set.seed(123)
+W.tree <- rpart(qlty.cat ~ ., data=W.tr[,-12])
+rpart.plot(W.tree)
+
+# Pruning the tree
+
+plotcp(W.tree) # Tree can be pruned to 7 nodes with cp=0.011
+W.tree.prune <- prune(W.tree, cp = 0.011)
+rpart.plot(W.tree.prune)
+
+## using autoprune function
+
+set.seed(123)
+rpart.plot(autoprune(qlty.cat ~ ., data=W.tr[,-12])) # takes 3 min not great
+
+# Predictions
+
+W.tree.pred <- predict(W.tree.prune, newdata=W.te[,-12], type="class")
+confusionMatrix(data = as.factor(W.te$qlty.cat),
+                reference = as.factor(W.tree.pred))
+
+W.tree.prob <- predict(W.tree, newdata=W.te[,-12], type="prob")
+
+plot(W.tree.pred ~ W.te$qlty.cat,
+     xlab="Qlty", ylab="Predictions")
+
+## Regression tree using numerical quality
+
+set.seed(123)
+W.treereg <- rpart(quality ~ ., data=W.tr[,-13])
+rpart.plot(W.treereg)
+
+plotcp(W.treereg) # 6 nodes needed at cp=0.015
+
+# Pruning the tree
+
+W.treereg.prune <- prune(W.treereg, cp=0.015)
+rpart.plot(W.treereg.prune)
+
+#Prediction of numericals
+W.treereg.pred <- predict(W.treereg.prune, newdata = W.te[,-13])
+
+plot(W.treereg.pred ~ W.te$quality,
+     xlab="Quality", ylab="Predictions")
+abline(0,1, col="red")
+```
+
+
+**Red Wine**
+
+First We check the fitted Tree before pruning
+
+```{r, echo = FALSE, include=TRUE, warning=FALSE}
+rpart.plot(R.tree)
+```
+
+Then we plot the CP graph to check whether any pruning can be done...
+
+```{r, echo = FALSE, include=TRUE, warning=FALSE}
+plotcp(R.tree) # Tree can be pruned to 7 nodes with cp=0.023
+```
+The Graph suggests a pruning at 7 nodes with a CP=0.023
+
+Doing just that, we get the following pruned tree
+
+```{r, echo = FALSE, include=TRUE, warning=FALSE}
+rpart.plot(R.tree.prune)
+```
+
+*Note: We also ran Autoprune for the Trees and concluded they are not better or as good as the manually pruned trees so we kept the originals for the analysis.*
+
+Prediction using the pruned tree gives a 76% Accuracy, we can also visualize the below 2-class summary table for predicting Quality category
+
+```{r, echo = FALSE, include=TRUE, warning=FALSE}
+plot(R.tree.pred ~ R.te$qlty.cat,
+     xlab="Quality", ylab="Predictions", main= "Red Wine",col=c("red","white"))
+```
+
+
+Following the same process for white Wine we conclude that we are able to prune at 7 nodes with a CP=0.011, doing just that we get the following pruned tree
+
+**White Wine pruned tree**
+```{r, echo = FALSE, include=TRUE, warning=FALSE}
+rpart.plot(W.tree.prune)
+```
+
+The following shows the prediction table for White Wine
+
+```{r, echo = FALSE, include=TRUE, warning=FALSE}
+plot(W.tree.pred ~ W.te$qlty.cat,
+     xlab="Quality", ylab="Predictions", main= "White Wine",col=c("white","black"))
+```
+
+
+#### Regression Tree on numerical Quality
+
+Using the numerical quality as Y variable we run regression trees for both datasets:
+
+**Red Wine**
+
+For Red wine our initial Tree had 13 nodes, a CP graph suggested 4 nodes with a cp=0.028.
+Our final pruning tree becomes the following:
+
+````{r, echo = FALSE, include=TRUE, warning=FALSE}
+rpart.plot(R.treereg.prune)
+```
+
+We plot the graph to show the predicted vs the actual quality and check the accuracy
+````{r, echo = FALSE, include=TRUE, warning=FALSE}
+plot(R.treereg.pred ~ R.te$quality,
+     xlab="Quality", ylab="Predictions", main= "Actual vs Predicted", ylim = c(3,9))
+abline(0,1, col="red")
+```
+
+**White Wine**
+
+Doing the same for White wine our initial tree of 9 nodes is reduced with a cp=0.015 to nodes 6 nodes
+````{r, echo = FALSE, include=TRUE, warning=FALSE}
+rpart.plot(W.treereg.prune)
+```
+
+
+And the visual representation shows:
+````{r, echo = FALSE, include=TRUE, warning=FALSE}
+plot(W.treereg.pred ~ W.te$quality,
+     xlab="Quality", ylab="Predictions", main= "Actual vs Predicted",ylim = c(3,9))
+abline(0,1, col="red")
+```
+
+**Notes on CART**
+Accuracy, clearly better for Red wine, is also satisfactory under a Categorical Tree model, pruning does help reduce model complexity and genrate better predicition outcomes.
+Although bigger in size but our White wine dataset saw fewer nodes after pruning.
+The Regression Tree model used to predict numerical quality however, does not show good prediction accuracy on a visual level, less so on the Red set vs the white.
+
+
+### Support Vector Machines
+```{r, echo = FALSE, include=FALSE}
+####################
+#####SVM
+##################
+
+# --------------------RED-----------------
+
+# SVM Linear Kernel
+R.svm <- svm(qlty.cat ~ ., data=R.tr[,-12] ,kernel= "linear")
+R.svm
+
+# Prediciton and Accuracy 
+R.svm.pred <- predict(R.svm, newdata = R.te[,-12])
+confusionMatrix(data=R.svm.pred, reference = R.te$qlty.cat ) 
+
+# SVM Radial Kernel 
+R.svmrad <- svm(qlty.cat ~ ., data=R.tr[,-12],kernel= "radial")
+
+# Pred and Acc  
+R.svmrad.pred <- predict(R.svmrad, newdata = R.te[,-12])
+confusionMatrix(data=R.svmrad.pred, reference = R.te$qlty.cat ) 
+
+# SVM polynomial Kernel
+R.svmpol <- svm(qlty.cat ~ ., data=R.tr[,-12],kernel= "polynomial")
+
+# Pred and Acc  
+R.svmpol.pred <- predict(R.svmpol, newdata = R.te[,-12])
+confusionMatrix(data=R.svmpol.pred, reference = R.te$qlty.cat ) 
+
+# Tuning Parameters to find optimal (Using radial = highest Accuracy)
+
+train.svm <- trainControl(method = "cv", number=10)
+
+grid.rad <- expand.grid(sigma = c(0.01, 0.05, 0.1,0.15),
+                           C = c(0.1,0.25,0.50,1, 10, 100))
+
+set.seed(420)
+R.svmrad.tune <- train(qlty.cat ~., data = R.te[,-12], method = "svmRadial",
+                             trControl=train.svm,
+                             tuneGrid = grid.rad)
+
+R.svmrad.tune  # best model with sigma=  0.15 and C = 0.5 gives accuracy of 0.74
+# Stick to default radial model with 76% accuracy
+
+# Using the optimal sigma and cost to fit a new SVM Radial including probabilities
+R.svmrad2 <- svm(qlty.cat~., data=R.tr[,-12], gamma=0.15, cost=0.5, probability=TRUE)
+R.svmrad2.pred <- predict(R.svmrad2, newdata=R.te[,-12], type="class")
+confusionMatrix(data=R.svmrad2.pred, reference = R.te$qlty.cat )
+
+R.svmrad2.prob <- predict(R.svmrad2, newdata=R.te[,-12], probability=TRUE) %>% attr("probabilities")
+
+# --------------------WHITE-----------------
+
+# SVM Linear Kernel
+W.svm <- svm (qlty.cat ~ ., data=W.tr[,-12] ,kernel= "linear")
+W.svm
+
+# Prediciton and Accuracy 
+W.svm.pred <- predict(W.svm, newdata = W.te[,-12])
+confusionMatrix(data=W.svm.pred, reference = W.te$qlty.cat ) 
+
+# SVM Radial Kernel 
+W.svmrad <- svm(qlty.cat ~ ., data=W.tr[,-12],kernel= "radial")
+
+# Pred and Acc  
+W.svmrad.pred <- predict(W.svmrad, newdata = W.te[,-12])
+confusionMatrix(data=W.svmrad.pred, reference = W.te$qlty.cat ) 
+
+# SVM polynomial Kernel
+W.svmpol <- svm(qlty.cat ~ ., data=W.tr[,-12],kernel= "polynomial")
+
+# Pred and Acc  
+W.svmpol.pred <- predict(W.svmpol, newdata = W.te[,-12])
+confusionMatrix(data=W.svmpol.pred, reference = W.te$qlty.cat) 
+
+# Tuning Parameters to find optimal (Using polynomial = highest Accuracy)
+grid.pol <- expand.grid( degree = c(1,2,3), scale = c(0.001, 0.01, 0.1),
+                        C = c(0.1,1,10))
+
+set.seed(420)
+W.svmpol.tune <- train(qlty.cat ~., data = W.te[,-12], method = "svmPoly",
+                      trControl=train.svm,
+                      tuneGrid = grid.pol)
+
+W.svmpol.tune  # best model with degree 3 scale=0.01 and C = 10 gives accuracy of 0.76
+# Stick to default poly model with 78% accuracy
+
+# Using the optimal sigma and cost to fit a new SVM Poly including probabilities
+W.svmpol2 <- svm(qlty.cat~., data=W.tr[,-12], degree=2, scale = 0.01,
+                 cost=10, probability=TRUE)
+W.svmpol2.pred <- predict(W.svmpol2, newdata=W.te[,-12], type="class")
+confusionMatrix(data=W.svmpol2.pred, reference = W.te$qlty.cat )
+
+
+W.svmpol2.prob <- predict(W.svmpol2, newdata=W.te[,-12], probability=TRUE) %>%
+  attr("probabilities")
+```
+
+We conduct an SVM model with different Kernel types on both Red and White sets for the Categorical quality variables
+
+We receive the following results of Accuracy:
+KERNEL     - RED - WHITE:
+Linear     - 74% - 73%
+Radial     - 81% - 78%
+Polynomial - 78% - 76%
+
+
+##### Tuning Hyperparameters
+
+We choose the best accuracy model for each data sets and run a training model using grid search to train and tune our best models in order to push up accuracy
+
+We use a train control Cross Validation (10 times) method
+
+For the RED Wine data set we have the radial kernel as the one with the highest accuracy. 
+we created a gird of different sigmas and costs and tuned the model and derived the following parameter optimals
+
+**Red Wine**
+
+For the Tuning of Red Wine dataset under a Radial method we took the following grid:
+expand.grid(sigma = c(0.01, 0.05, 0.1,0.15), C = c(0.1,0.25,0.50,1, 10, 100))
+We got the following results
+
+```{r, echo = FALSE, include=TRUE, warning=FALSE}
+R.svmrad.tune$bestTune
+```
+
+We then choose the best hyperparameters for our model in order to re-fit and check the improvement in Accuracy. the result is the same, Accuracy of 81% which is the standard SVM radial model
+
+**White Wine**
+
+For our White dataset , although Radial also is the best Accuracy model but we will try to optimise on Polynomial to check whether we can reach the same accuracy.
+
+For the Tuning of White Wine dataset under a Polynomial kernel we took the following grid:
+expand.grid(degree = c(1,2,3), scale = c(0.001, 0.01, 0.1), C = c(0.1,1,10))
+we get the following results:
+```{r, echo = FALSE, include=TRUE, warning=FALSE}
+W.svmpol.tune$bestTune
+```
+
+Fitting the tuned model we get an amazing accuracy of 82%
+
+**Notes on SVM**
+SVM seems to be a good classification model for our categorical quality of wine for both colors. Surprisingly the tuning of the polynomial model provided much better improvement for white compared to the tuning of the Radial model of the red dataset. 
+Nonetheless both Red and White tuned models are good predictors.
+
+
+
+### Model Scoring
+```{r, echo = FALSE, include=FALSE}
+#================================
+#============ SCORING 
+#================================
+
+
+#----------------------RED-------------------
+
+## Quality Category Goob/Bad 
+# KNN
+R.knn.scr <- data.frame(obs=R.te$qlty.cat,
+                        R.knn.prob,
+                        pred=as.factor(R.knn.pred))
+head(R.knn.scr)
+
+# Logistic Regression
+R.glm.scr <- data.frame(obs=R.te$qlty.cat,
+                          Good=R.glm.prob,
+                          Bad=1-R.glm.prob ,
+                          pred=as.factor(R.glm.pred))
+head(R.glm.scr) #logistic reg
+
+R.nb.scr <- data.frame(obs=R.te$qlty.cat,
+                      R.nb.prob,
+                       pred=as.factor(R.nb.pred))
+head(R.nb.scr) #naive bayes
+
+R.tree.scr <- data.frame(obs=R.te$qlty.cat,
+                          R.tree.prob ,
+                          pred=as.factor(R.tree.pred))
+head(R.tree.scr)#classification tree
+
+R.svm.scr <- data.frame(obs=R.te$qlty.cat,
+                        R.svmrad2.prob ,
+                           pred=as.factor(R.svmrad2.pred))
+head(R.svm.scr)
+
+twoClassSummary(R.knn.scr, lev = levels(R.knn.scr$obs)) 
+twoClassSummary(R.glm.scr, lev = levels(R.glm.scr$obs)) 
+twoClassSummary(R.nb.scr, lev = levels(R.nb.scr$obs))
+twoClassSummary(R.tree.scr, lev = levels(R.tree.scr$obs))
+twoClassSummary(R.svm.scr, lev = levels(R.svm.scr$obs))
+
+## LogR and SVM best 2 models
+
+#entropy
+mnLogLoss(R.knn.scr, lev = levels(R.knn.scr$obs)) 
+mnLogLoss(R.glm.scr, lev = levels(R.glm.scr$obs)) 
+mnLogLoss(R.nb.scr, lev = levels(R.nb.scr$obs))
+mnLogLoss(R.tree.scr, lev = levels(R.tree.scr$obs))
+mnLogLoss(R.svm.scr, lev = levels(R.svm.scr$obs))
+
+# ROC
+R.knn.ROC <- roc(obs ~ Good, data=R.knn.scr)
+R.glm.ROC <- roc(obs ~ Good, data=R.glm.scr)
+R.nb.ROC<- roc(obs ~ Good, data=R.nb.scr)
+R.tree.ROC <- roc(obs ~ Good, data=R.tree.scr)
+R.svm.ROC <- roc(obs ~ Good, data=R.svm.scr)
+
+plot(R.knn.ROC, print.thres="best")
+plot(R.glm.ROC, print.thres="best", add=TRUE)
+plot(R.nb.ROC, print.thres="best", add=TRUE)
+plot(R.tree.ROC, print.thres="best", add=TRUE)
+plot(R.svm.ROC, print.thres="best", add=TRUE)
+
+
+#MAE and RMSE
+#Linear Regression
+RMSE(predict(R.lm, newdata = R.te[,-13]), R.te$quality)
+MAE(predict(R.lm, newdata = R.te[,-13]), R.te$quality)
+
+#Knn regression
+RMSE(predict(R.knnreg, newdata = R.te[,-13]), R.te$quality)
+MAE(predict(R.knnreg, newdata = R.te[,-13]), R.te$quality)
+
+# Regresssion Tree
+RMSE(predict(R.treereg, newdata = R.te[,-13]), R.te$quality)
+MAE(predict(R.treereg, newdata = R.te[,-13]), R.te$quality)
+
+
+par(mfrow=c(2,2))
+plot(R.te$quality ~ predict(R.lm, newdata = R.te[,-13]), xlab="Prediction", 
+     ylab="quality", main="Lin. Reg.")
+abline(0,1)
+plot(R.te$quality ~ predict(R.treereg, newdata = R.te[,-13]), xlab="Prediction", 
+     ylab="quality", main="Reg Tree")
+abline(0,1)
+plot(R.te$quality ~ predict(R.knnreg, newdata = R.te[,-13]), xlab="Prediction", 
+     ylab="quality", main="KNN")
+abline(0,1)
+par(mfrow=c(2,2))
+
+
+
+# Tuning the models based on ROC for optimal threshold
+# Logistic
+R.glm.roctune <- roc(obs ~ Good, 
+                   data= data.frame(obs=R.tr$qlty.cat,
+                Good=predict(R.glm, newdata=R.tr[,-12], type="response")))
+plot(R.glm.roctune, print.thres="best") # 0.466
+
+confusionMatrix(data=as.factor(ifelse(R.glm.prob>0.466,"Good","Bad")),
+                reference = R.te$qlty.cat) # increased accuracy by 1%
+
+# Knn
+R.knn.roctune <- roc(obs ~ Good, 
+                     data= data.frame(obs=R.tr$qlty.cat,
+                 predict(R.knn, newdata=R.tr[,-c(12,13)], type="prob")))
+plot(R.knn.roctune, print.thres="best")
+
+confusionMatrix(data= as.factor(ifelse(R.knn.prob[,2]>0.9,"Good","Bad")),
+                reference = R.te$qlty.cat) #0.8% increase in accuracy
+# Naive bayes
+R.nb.roctune <- roc(obs ~ Good, 
+                     data= data.frame(obs=R.tr$qlty.cat,
+                   predict(R.nb, newdata=R.tr[,-c(12,13)], type="prob")))
+plot(R.nb.roctune, print.thres="best")
+
+confusionMatrix(data= as.factor(ifelse(R.nb.prob[,2]>0.627,"Good","Bad")),
+                reference = R.te$qlty.cat) #0.6% increase in accuracy
+# CART
+R.tree.roctune <- roc(obs ~ Good, 
+                     data= data.frame(obs=R.tr$qlty.cat,
+                  predict(R.tree, newdata=R.tr[,-12], type="prob")))
+plot(R.tree.roctune, print.thres="best")
+
+confusionMatrix(data= as.factor(ifelse(R.tree.prob[,2]>0.519,"Good","Bad")),
+                reference = R.te$qlty.cat) #6 increase in accuracy
+
+
+#----------------------WHITE------------------
+
+## Quality Category Goob/Bad 
+# KNN
+W.knn.scr <- data.frame(obs=W.te$qlty.cat,
+                        W.knn.prob,
+                        pred=as.factor(W.knn.pred))
+head(W.knn.scr)
+
+# Logistic Regression
+W.glm.scr <- data.frame(obs=W.te$qlty.cat,
+                        Good=W.glm.prob,
+                        Bad=1-W.glm.prob ,
+                        pred=as.factor(W.glm.pred))
+head(W.glm.scr) #logistic reg
+
+W.nb.scr <- data.frame(obs=W.te$qlty.cat,
+                       W.nb.prob,
+                       pred=as.factor(W.nb.pred))
+head(W.nb.scr) #naive bayes
+
+W.tree.scr <- data.frame(obs=W.te$qlty.cat,
+                         W.tree.prob ,
+                         pred=as.factor(W.tree.pred))
+head(W.tree.scr)#classification tree
+
+W.svm.scr <- data.frame(obs=W.te$qlty.cat,
+                        W.svmpol2.prob ,
+                        pred=as.factor(W.svmpol2.pred))
+head(W.svm.scr)
+
+twoClassSummary(W.knn.scr, lev = levels(W.knn.scr$obs)) 
+twoClassSummary(W.glm.scr, lev = levels(W.glm.scr$obs)) 
+twoClassSummary(W.nb.scr, lev = levels(W.nb.scr$obs))
+twoClassSummary(W.tree.scr, lev = levels(W.tree.scr$obs))
+twoClassSummary(W.svm.scr, lev = levels(W.svm.scr$obs))
+
+## LogR and SVM best 2 models
+
+#entropy
+mnLogLoss(W.knn.scr, lev = levels(W.knn.scr$obs)) 
+mnLogLoss(W.glm.scr, lev = levels(W.glm.scr$obs)) 
+mnLogLoss(W.nb.scr, lev = levels(W.nb.scr$obs))
+mnLogLoss(W.tree.scr, lev = levels(W.tree.scr$obs))
+mnLogLoss(W.svm.scr, lev = levels(W.svm.scr$obs))
+
+# ROC
+W.knn.ROC <- roc(obs ~ Good, data=W.knn.scr)
+W.glm.ROC <- roc(obs ~ Good, data=W.glm.scr)
+W.nb.ROC<- roc(obs ~ Good, data=W.nb.scr)
+W.tree.ROC <- roc(obs ~ Good, data=W.tree.scr)
+W.svm.ROC <- roc(obs ~ Good, data=W.svm.scr)
+
+plot(W.knn.ROC, print.thres="best")
+plot(W.glm.ROC, print.thres="best", add=TRUE)
+plot(W.nb.ROC, print.thres="best", add=TRUE)
+plot(W.tree.ROC, print.thres="best", add=TRUE)
+plot(W.svm.ROC, print.thres="best", add=TRUE)
+
+
+#MAE and RMSE
+#Linear Regression
+RMSE(predict(W.lm, newdata = W.te[,-13]), W.te$quality)
+MAE(predict(W.lm, newdata = W.te[,-13]), W.te$quality)
+
+#Knn regression
+RMSE(predict(W.knnreg, newdata = W.te[,-13]), W.te$quality)
+MAE(predict(W.knnreg, newdata = W.te[,-13]), W.te$quality)
+
+# Regresssion Tree
+RMSE(predict(W.treereg, newdata = W.te[,-13]), W.te$quality)
+MAE(predict(W.treereg, newdata = W.te[,-13]), W.te$quality)
+
+
+par(mfrow=c(2,2))
+plot(W.te$quality ~ predict(W.lm, newdata = W.te[,-13]), xlab="Prediction", 
+     ylab="quality", main="Lin. Reg.")
+abline(0,1)
+plot(W.te$quality ~ predict(W.treereg, newdata = W.te[,-13]), xlab="Prediction", 
+     ylab="quality", main="Reg Tree")
+abline(0,1)
+plot(W.te$quality ~ predict(W.knnreg, newdata = W.te[,-13]), xlab="Prediction", 
+     ylab="quality", main="KNN")
+abline(0,1)
+par(mfrow=c(2,2))
+
+
+
+# Tuning the models based on ROC for optimal threshold
+# Logistic
+W.glm.roctune <- roc(obs ~ Good, 
+                     data= data.frame(obs=W.tr$qlty.cat,
+                                      Good=predict(W.glm, newdata=W.tr[,-12], type="response")))
+plot(W.glm.roctune, print.thres="best") # 0.498
+
+confusionMatrix(data=as.factor(ifelse(W.glm.prob>0.498,"Good","Bad")),
+                reference = W.te$qlty.cat) # improved baanced accuracy only
+
+# Knn
+W.knn.roctune <- roc(obs ~ Good, 
+                     data= data.frame(obs=W.tr$qlty.cat,
+                    predict(W.knn, newdata=W.tr[,-c(12,13)], type="prob")))
+plot(W.knn.roctune, print.thres="best")
+
+confusionMatrix(data= as.factor(ifelse(W.knn.prob[,2]>0.367,"Good","Bad")),
+                reference = W.te$qlty.cat) #2% increase in accuracy
+# Naive bayes
+W.nb.roctune <- roc(obs ~ Good, 
+                    data= data.frame(obs=W.tr$qlty.cat,
+                    predict(W.nb, newdata=W.tr[,-c(12,13)], type="prob")))
+plot(W.nb.roctune, print.thres="best")
+
+confusionMatrix(data= as.factor(ifelse(W.nb.prob[,2]>0.618,"Good","Bad")),
+                reference = W.te$qlty.cat) #only increase in balanced acc
+# CART
+W.tree.roctune <- roc(obs ~ Good, 
+                      data= data.frame(obs=W.tr$qlty.cat,
+                                       predict(W.tree, newdata=W.tr[,-12], type="prob")))
+plot(W.tree.roctune, print.thres="best")
+
+confusionMatrix(data= as.factor(ifelse(W.tree.prob[,2]>0.494,"Good","Bad")),
+                reference = W.te$qlty.cat) #3% increase in Bal accuracy
+```
+
+In order to review our models so far and decide whether we can improve on them we will score our models using different Techniques and attempt to fine tune them to achieve better prediction results.
+
+
+#### Binary classification Models
+
+##### Two Class Summary
+
+Retrieving the stats for our top 5 models from each method for the Categorical Classification of wine quality
+
+
+```{r, echo = FALSE, include=TRUE, warning=FALSE}
+R.twoclass <- rbind(
+twoClassSummary(R.knn.scr, lev = levels(R.knn.scr$obs)),
+twoClassSummary(R.nb.scr, lev = levels(R.nb.scr$obs)),
+twoClassSummary(R.glm.scr, lev = levels(R.glm.scr$obs)),
+twoClassSummary(R.tree.scr, lev = levels(R.tree.scr$obs)),
+twoClassSummary(R.svm.scr, lev = levels(R.svm.scr$obs))
+)
+
+rownames(R.twoclass) <- c("knn","NB","GLM","Tree","SVM")
+
+
+W.twoclass <- rbind(
+twoClassSummary(W.knn.scr, lev = levels(W.knn.scr$obs)) ,
+twoClassSummary(W.nb.scr, lev = levels(W.nb.scr$obs)),
+twoClassSummary(W.glm.scr, lev = levels(W.glm.scr$obs)),
+twoClassSummary(W.tree.scr, lev = levels(W.tree.scr$obs)),
+twoClassSummary(W.svm.scr, lev = levels(W.svm.scr$obs))
+)
+rownames(W.twoclass) <- c("knn","NB","GLM","Tree","SVM")
+
+cbind(R.twoclass, W.twoclass) %>%
+  kbl(caption = "<b>Statistics</b>", align = "cccccc") %>%
+  kable_classic(full_width = T, html_font = "Cambria", "striped") %>%
+  kable_styling(bootstrap_options = c("hover", "condensed")) %>%
+  column_spec(c(2,5), border_left = TRUE) %>%
+  add_header_above(c(" " = 1, "Red Wine" = 3, "White Wine" = 3))
+```
+
+
+##### Entropy
+
+Calculating the Entropy for each of the models on both datasets
+```{r, echo = FALSE, include=TRUE, warning=FALSE}
+
+R.logloss <- rbind(
+mnLogLoss(R.knn.scr, lev = levels(R.knn.scr$obs)) ,
+mnLogLoss(R.nb.scr, lev = levels(R.nb.scr$obs)),
+mnLogLoss(R.glm.scr, lev = levels(R.glm.scr$obs)),
+mnLogLoss(R.tree.scr, lev = levels(R.tree.scr$obs)),
+mnLogLoss(R.svm.scr, lev = levels(R.svm.scr$obs))
+)
+rownames(R.logloss) <- c("knn","NB","GLM","Tree","SVM")
+
+
+W.logloss <- rbind(
+mnLogLoss(W.knn.scr, lev = levels(W.knn.scr$obs)) ,
+mnLogLoss(W.nb.scr, lev = levels(W.nb.scr$obs)),
+mnLogLoss(W.glm.scr, lev = levels(W.glm.scr$obs)),
+mnLogLoss(W.tree.scr, lev = levels(W.tree.scr$obs)),
+mnLogLoss(W.svm.scr, lev = levels(W.svm.scr$obs))
+)
+rownames(W.logloss) <- c("knn","NB","GLM","Tree","SVM")
+
+cbind(R.logloss,W.logloss)%>%
+  kbl(caption = "<b>Log-loss</b>", align = "cc") %>%
+  kable_classic(full_width = T, html_font = "Cambria", "striped")%>%
+  kable_styling(bootstrap_options = c("hover", "condensed"))  %>%
+  add_header_above(c(" " = 1, "Red Wine" = 1, "White Wine" = 1))
+```
+
+
+KNN seems to have the highest Accuracy but also highest Entropy , a close second is the SVM  which has really good accuracy with the lowest Entropy
+
+
+##### Tuning Using ROC
+
+In order to find our optimal Cut-OFF point or threshhold we tune our models using the best ROC method to derive the optimal threshhold.
+(Note that our SVM models have already been turned using grid search, we will attempt to tune our KNN, NB, Log and CART).
+
+**Red Wine**
+```{r, echo = FALSE, include=TRUE, warning=FALSE}
+par(mfrow=c(2,2))
+par(pin=c(2.7,3))              
+
+plot(R.glm.roctune, print.thres="best", main = "glm") # 0.466
+plot(R.knn.roctune, print.thres="best", main = "KNN")
+plot(R.nb.roctune, print.thres="best", main = "NB")
+plot(R.tree.roctune, print.thres="best", main = "Tree")
+```
+we get the following Cutoffs for our models:
+- KNN 0.9
+- NB 0.63
+- GLM 0.47
+- Tree 0.52
+
+Applying these Thresholds we get the following prediction Accuracies
+
+
+```{r, echo = FALSE, include=TRUE, warning=FALSE}
+cbind(c("GLM", "KNN", "NB", "Tree"),rbind(
+confusionMatrix(data=as.factor(ifelse(R.glm.prob>0.466,"Good","Bad")),
+                reference = R.te$qlty.cat)$overall[c(1,2)],
+confusionMatrix(data= as.factor(ifelse(R.knn.prob[,2]>0.9,"Good","Bad")),
+                reference = R.te$qlty.cat)$overall[c(1,2)],
+confusionMatrix(data= as.factor(ifelse(R.nb.prob[,2]>0.63,"Good","Bad")),
+                reference = R.te$qlty.cat)$overall[c(1,2)],
+confusionMatrix(data= as.factor(ifelse(R.tree.prob[,2]>0.52,"Good","Bad")),
+                reference = R.te$qlty.cat)$overall[c(1,2)]))%>% 
+  kbl(caption = "<b>Red Wine - ROC Tuned</b>", align = "crc")  %>%
+  kable_classic(full_width = T, html_font = "Cambria", "striped")%>%
+  kable_styling(bootstrap_options = c("hover", "condensed")) 
+```
+
+
+
+**White Wine**
+```{r, echo = FALSE, include=TRUE, warning=FALSE}
+par(mfrow=c(2,2))
+par(pin=c(2.7,3))              
+
+plot(W.glm.roctune, print.thres="best", main = "glm") 
+plot(W.knn.roctune, print.thres="best", main = "KNN")
+plot(W.nb.roctune, print.thres="best", main = "NB")
+plot(W.tree.roctune, print.thres="best", main = "Tree regression")
+```
+we get the following Cutoffs for our models:
+- KNN 0.37
+- NB 0.62
+- GLM 0.50
+- Tree 0.49
+
+Applying these Thresholds we get the following prediction Accuracies
+
+```{r, echo = FALSE, include=TRUE, warning=FALSE}
+cbind(c("GLM", "KNN", "NB", "Tree"),rbind(
+confusionMatrix(data=as.factor(ifelse(W.glm.prob>0.50,"Good","Bad")),
+                reference = W.te$qlty.cat)$overall[c(1,2)],
+confusionMatrix(data= as.factor(ifelse(W.knn.prob[,2]>0.37,"Good","Bad")),
+                reference = W.te$qlty.cat)$overall[c(1,2)],
+confusionMatrix(data= as.factor(ifelse(W.nb.prob[,2]>0.62,"Good","Bad")),
+                reference = W.te$qlty.cat)$overall[c(1,2)],
+confusionMatrix(data= as.factor(ifelse(W.tree.prob[,2]>0.49,"Good","Bad")),
+                reference = W.te$qlty.cat)$overall[c(1,2)]))%>% 
+  kbl(caption = "<b>White Wine - ROC Tuned</b>", align = "ccc") %>%
+  kable_classic(full_width = T, html_font = "Cambria", "striped")%>%
+  kable_styling(bootstrap_options = c("hover", "condensed"))
+```
+
+**Notes on ROC Tuning**
+The ROC tuning improved all of our models more or less for both datasets, the choice of Threshold clearly has an impact on prediction accuracy when it comes to binary class predction
+
+
+#### Regression / multi-class Models
+
+For all our models that predict numerical quality scores we use the RMSE and MAE metrics to check accuracy
+
+```{r, echo = FALSE, include=TRUE, warning=FALSE}
+R.rmse.mae <- cbind(rbind(
+RMSE(predict(R.lm, newdata = R.te[,-13]), R.te$quality),
+RMSE(predict(R.knnreg, newdata = R.te[,-13]), R.te$quality),
+RMSE(predict(R.treereg, newdata = R.te[,-13]), R.te$quality)),
+rbind(MAE(predict(R.lm, newdata = R.te[,-13]), R.te$quality),
+      MAE(predict(R.knnreg, newdata = R.te[,-13]), R.te$quality),
+      MAE(predict(R.treereg, newdata = R.te[,-13]), R.te$quality)
+      ))
+colnames(R.rmse.mae) <- c("RMSE","MAE")
+rownames(R.rmse.mae) <- c("LM","KNNreg","Treereg")
+
+R.rmse.mae%>% kbl(caption = "<b>Red Wine</b>", align = "cc") %>%
+  kable_classic(full_width = T, html_font = "Cambria", "striped")%>%
+  kable_styling(bootstrap_options = c("hover", "condensed")) 
+```
+
+```{r, echo = FALSE, include=TRUE, warning=FALSE}
+W.rmse.mae <- cbind(rbind(
+RMSE(predict(W.lm, newdata = W.te[,-13]), W.te$quality),
+RMSE(predict(W.knnreg, newdata = W.te[,-13]), W.te$quality),
+RMSE(predict(W.treereg, newdata = W.te[,-13]), W.te$quality)),
+rbind(MAE(predict(W.lm, newdata = W.te[,-13]), W.te$quality),
+      MAE(predict(W.knnreg, newdata = W.te[,-13]), W.te$quality),
+      MAE(predict(W.treereg, newdata = W.te[,-13]), W.te$quality)
+      ))
+colnames(W.rmse.mae) <- c("RMSE","MAE")
+rownames(W.rmse.mae) <- c("LM","KNNreg","Treereg")
+
+W.rmse.mae%>% kbl(caption = "<b>White Wine</b>", align = "cc") %>%
+  kable_classic(full_width = T, html_font = "Cambria", "striped")%>%
+  kable_styling(bootstrap_options = c("hover", "condensed")) 
+```
+
+**Notes on Numerical Model Scores** 
+Although Visually not appealing and not as convincing as binary classification models, but between our regression models we find that KNN is by far the best predictor with lowest error in accuracy for both Red and White wine. Prediction quality for Red is slightly higher.
+
+
+### Random Forest
+```{r, echo = FALSE, include=FALSE}
+###########################
+###RANDOM FOREST
+##########################
+train.varimp <- trainControl(method = "repeatedcv", repeats= 3, number=5)
+
+#--------------------RED----------------------
+
+# Checking Error Improvement and Var Important under Random Forest and Ranger
+R.tree.RF <- randomForest(qlty_cat~., data=(janitor::clean_names(R.tr))[,-12])
+R.treereg.RF <- randomForest(quality~., data=(janitor::clean_names(R.tr))[,-13])
+
+
+# Checking Var imp under ranger
+R.tree.rng <- train(qlty.cat~., data = R.tr[,-12], method = "ranger",
+                       trControl=train.varimp, importance="impurity")
+
+
+
+R.treereg.rng <- train(quality~., data = R.tr[,-13], method = "ranger",
+                    trControl=train.varimp, importance="impurity")
+grid.arrange(plot(varImp(R.treereg.rng), main = "TreeReg"),
+plot(varImp(R.tree.rng), main = "Class. Tree"), nrow=1,ncol=2)
+
+
+#-------------------WHITE---------------------
+
+
+# Checking Error Improvement and Var Important under Random Forest
+W.tree.RF <- randomForest(qlty_cat~., data=(janitor::clean_names(W.tr))[,-12])
+W.treereg.RF <- randomForest(quality~., data=(janitor::clean_names(W.tr))[,-13])
+
+
+varImpPlot(W.tree.RF)
+varImpPlot(W.treereg.RF)
+
+# Checking Var imp under ranger
+W.tree.rng <- train(qlty.cat~., data = W.tr[,-12], method = "ranger",
+                    trControl=train.varimp, importance="impurity")
+
+
+
+W.treereg.rng <- train(quality~., data = W.tr[,-13], method = "ranger",
+                       trControl=train.varimp, importance="impurity")
+```
+
+We will apply random forest and Ranger models in order to see how much we can improve the accuracy of our CART models
+
+We use a training control of Repeated Cross-Validation with 3 repeats of 5 Validations.
+
+The Random Forest and Ranger will be fitted on the balanced training sets. Ranger will be trained by using "Impurity" as an optimisation factor. 
+
+**RED WINE**
+
+We plot the Random Forest Error / Tree number charts
+
+```{r, echo = FALSE, include=TRUE, warning=FALSE}
+
+plot(R.treereg.RF, main= "Random Forest - Reg. Tree")
+plot(R.tree.RF, main= "Random Forest - Class Tree")
+``` 
+
+After fitting Random forest model on our training set and assessing the prediction accuracy on our testing set we get the following results: 
+
+-*RMSE Dropps from 0.73 to 0.365 between a normal Reg. Tree and the Random Forest*
+
+-*Accuracy Increases from 0.76 to 0.95 using the Random forest Vs the Class. Tree*
+
+Using a Ranger model we get the following:
+
+-*RMSE is at 0.38*
+
+-*Accuracy is at 0.96*
+
+
+**WHITE WINE**
+
+Same plots of Errr/ Tree number
+
+```{r, echo = FALSE, include=TRUE, warning=FALSE}
+
+plot(W.treereg.RF, main= "Random Forest - Reg. Tree")
+plot(W.tree.RF, main= "Random Forest - Class Tree")
+``` 
+
+
+Fitting a Random Forest yields the following improvements:
+
+-*RMSE for the Reg. Tree model drops from 0.77 to 0.48*
+
+-*Accuracy increases for the Class. tree model from 0.73 to 0.91*
+
+Using the Ranger method:
+
+-*RMSE drops to 0.48*
+
+-*Accuracy jumps to 0.91 as well* 
+
+**Notes** It is very evident that the Random Forest and Ranger is a major improvement in accuracy for both Classification and Regression Tree models.
+One difference is that in the White dataset both models led to the same result while in the red each had an improvement advantage but still in the same proximity.
+
+

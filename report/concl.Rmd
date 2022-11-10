@@ -1,0 +1,190 @@
+# Results and Conclusion
+
+```{r, echo = FALSE, message = FALSE}
+source(here::here("scripts/setup.R"))
+```
+
+To summarize all these lengthy analyses, here is a table containing most of the interesting metrics for each model that we performed:
+
+### Red Wine
+
+
+
+```{r, echo = FALSE, include=TRUE}
+makeStats <- function(stats = c("Accuracy", "Balanced Accuracy", "Kappa", "Sensitivity", "Specificity")){
+  temp <- tibble("Method" = character())
+  for(stat in stats) temp <- cbind(temp, tibble("." = numeric()))
+  colnames(temp) <- c("Method", stats)
+  return(temp)
+}
+
+addStats <- function(Stats, method, cM){
+  Stats <- Stats %>% 
+    add_row(Method = method,
+            Accuracy = cM$overall["Accuracy"],
+            `Balanced Accuracy` = cM$byClass["Balanced Accuracy"],
+            Kappa = cM$overall["Kappa"],
+            Sensitivity = cM$byClass["Sensitivity"],
+            Specificity = cM$byClass["Specificity"]
+    ) %>%
+    as_tibble()
+  return(Stats)
+}
+
+R.CM <- list()
+R.CM$bs <- confusionMatrix(as.factor(R.bs.pred), as.factor(R.te$qlty.cat))
+R.CM$cv <- confusionMatrix(as.factor(R.cv.pred), as.factor(R.te$qlty.cat))
+R.CM$glm <- confusionMatrix(as.factor(R.glm.pred), as.factor(R.te$qlty.cat))
+R.CM$knn <- confusionMatrix(as.factor(R.knn.pred), as.factor(R.te$qlty.cat))
+R.CM$nb <- confusionMatrix(as.factor(R.nb.pred), as.factor(R.te$qlty.cat))
+R.CM$nbprior <- confusionMatrix(as.factor(R.nbprior.pred), as.factor(R.te$qlty.cat))
+R.CM$svm <- confusionMatrix(as.factor(R.svm.pred), as.factor(R.te$qlty.cat))
+R.CM$svmpol <- confusionMatrix(as.factor(R.svmpol.pred), as.factor(R.te$qlty.cat))
+R.CM$svmrad <- confusionMatrix(as.factor(R.svmrad.pred), as.factor(R.te$qlty.cat))
+R.CM$svmrad2 <- confusionMatrix(as.factor(R.svmrad2.pred), as.factor(R.te$qlty.cat))
+R.CM$tree <- confusionMatrix(as.factor(R.tree.pred), as.factor(R.te$qlty.cat))
+R.CM$knnroc <- confusionMatrix(data= as.factor(ifelse(R.knn.prob[,2]>0.9,"Good","Bad")),
+                               reference = R.te$qlty.cat)
+R.CM$nbroc <- confusionMatrix(data= as.factor(ifelse(R.nb.prob[,2]>0.627,"Good","Bad")),
+                              reference = R.te$qlty.cat)
+R.CM$glmroc <- confusionMatrix(data=as.factor(ifelse(R.glm.prob>0.466,"Good","Bad")),
+                               reference = R.te$qlty.cat)
+R.CM$treeroc <- confusionMatrix(data= as.factor(ifelse(R.tree.prob[,2]>0.519,"Good","Bad")),
+                                reference = R.te$qlty.cat)
+R.CM$treeRF <- confusionMatrix(data = as.factor(janitor::clean_names(R.te)$qlty_cat),
+                               reference = as.factor(predict(R.tree.RF,
+                                                             newdata = janitor::clean_names(R.te)[,-12], 
+                                                             type="class")))
+R.CM$treeRngr <- confusionMatrix(data = as.factor(R.te$qlty.cat),
+                                 reference = as.factor(predict(R.tree.rng,
+                                                               newdata = R.te[,-12])))
+
+
+R.stats <- makeStats() %>% 
+  addStats(method = "Bootstrapping", cM = R.CM$bs) %>%
+  addStats(method = "Cross-validation", cM = R.CM$cv) %>%
+  addStats(method = "GLM", cM = R.CM$glm) %>%
+  addStats(method = "K-NN", cM = R.CM$knn) %>%
+  addStats(method = "Naive-Bayes", cM = R.CM$nb) %>%
+  addStats(method = "Naive-Bayes (with priors)", cM = R.CM$nbprior) %>%
+  addStats(method = "SVM linear", cM = R.CM$svm) %>%
+  addStats(method = "SVM polynomial", cM = R.CM$svmpol) %>%
+  addStats(method = "SVM radial", cM = R.CM$svmrad) %>%
+  addStats(method = "SVM radial-tuned", cM = R.CM$svmrad2) %>%
+  addStats(method = "Tree", cM = R.CM$tree)%>%
+  addStats(method = "KNN-ROCtune", cM = R.CM$knnroc)%>%
+  addStats(method = "NB-ROCtune", cM = R.CM$nbroc)%>%
+  addStats(method = "GLM-ROCtune", cM = R.CM$glmroc)%>%
+  addStats(method = "Tree-ROCtune", cM = R.CM$treeroc)%>%
+  addStats(method = "Tree-R.F.", cM = R.CM$treeRF)%>%
+  addStats(method = "Tree-Ranger", cM = R.CM$treeRngr)
+
+R.stats%>%
+  kbl(caption = "<b>Red Wine</b>")  %>%
+  kable_classic(full_width = T, html_font = "Cambria", "striped")%>%
+  kable_styling(bootstrap_options = c("hover", "condensed")) %>% 
+  scroll_box(width = "100%", height = "300px")
+
+```
+
+
+
+
+### White Wine
+
+```{r, echo = FALSE, include=TRUE}
+
+W.CM <- list()
+W.CM$bs <- confusionMatrix(as.factor(W.bs.pred), as.factor(W.te$qlty.cat))
+W.CM$cv <- confusionMatrix(as.factor(W.cv.pred), as.factor(W.te$qlty.cat))
+W.CM$glm <- confusionMatrix(as.factor(W.glm.pred), as.factor(W.te$qlty.cat))
+W.CM$knn <- confusionMatrix(as.factor(W.knn.pred), as.factor(W.te$qlty.cat))
+W.CM$nb <- confusionMatrix(as.factor(W.nb.pred), as.factor(W.te$qlty.cat))
+W.CM$nbprior <- confusionMatrix(as.factor(W.nbprior.pred), as.factor(W.te$qlty.cat))
+W.CM$svm <- confusionMatrix(as.factor(W.svm.pred), as.factor(W.te$qlty.cat))
+W.CM$svmpol <- confusionMatrix(as.factor(W.svmpol.pred), as.factor(W.te$qlty.cat))
+W.CM$svmrad <- confusionMatrix(as.factor(W.svmrad.pred), as.factor(W.te$qlty.cat))
+W.CM$svmpol2 <- confusionMatrix(as.factor(W.svmpol2.pred), as.factor(W.te$qlty.cat))
+W.CM$tree <- confusionMatrix(as.factor(W.tree.pred), as.factor(W.te$qlty.cat))
+W.CM$knnroc <- confusionMatrix(data= as.factor(ifelse(W.tree.prob[,2]>0.37,"Good","Bad")),
+                               reference = W.te$qlty.cat)
+W.CM$nbroc <- confusionMatrix(data= as.factor(ifelse(W.nb.prob[,2]>0.62,"Good","Bad")),
+                              reference = W.te$qlty.cat)
+W.CM$glmroc <- confusionMatrix(data=as.factor(ifelse(W.glm.prob>0.5,"Good","Bad")),
+                               reference = W.te$qlty.cat)
+W.CM$treeroc <- confusionMatrix(data= as.factor(ifelse(W.tree.prob[,2]>0.49,"Good","Bad")),
+                                reference = W.te$qlty.cat)
+W.CM$treeRF <- confusionMatrix(data = as.factor(janitor::clean_names(W.te)$qlty_cat),
+                               reference = as.factor(predict(W.tree.RF,
+                                                             newdata = janitor::clean_names(W.te)[,-12], 
+                                                             type="class")))
+W.CM$treeRngr <- confusionMatrix(data = as.factor(W.te$qlty.cat),
+                                 reference = as.factor(predict(W.tree.rng,
+                                                               newdata = W.te[,-12])))
+
+
+
+W.stats <- makeStats() %>% 
+  addStats(method = "Bootstrapping", cM = W.CM$bs) %>%
+  addStats(method = "Cross-validation", cM = W.CM$cv) %>%
+  addStats(method = "GLM", cM = W.CM$glm) %>%
+  addStats(method = "K-NN", cM = W.CM$knn) %>%
+  addStats(method = "Naive-Bayes", cM = W.CM$nb) %>%
+  addStats(method = "Naive-Bayes (with priors)", cM = W.CM$nbprior) %>%
+  addStats(method = "SVM linear", cM = W.CM$svm) %>%
+  addStats(method = "SVM polynomial", cM = W.CM$svmpol) %>%
+  addStats(method = "SVM radial", cM = W.CM$svmrad) %>%
+  addStats(method = "SVM poly-tuned", cM = W.CM$svmpol2) %>%
+  addStats(method = "Tree", cM = W.CM$tree)%>%
+  addStats(method = "KNN-ROCtune", cM = W.CM$knnroc)%>%
+  addStats(method = "NB-ROCtune", cM = W.CM$nbroc)%>%
+  addStats(method = "GLM-ROCtune", cM = W.CM$glmroc)%>%
+  addStats(method = "Tree-ROCtune", cM = W.CM$treeroc)%>%
+  addStats(method = "Tree-W.F.", cM = W.CM$treeRF)%>%
+  addStats(method = "Tree-Ranger", cM = W.CM$treeRngr)
+
+W.stats%>%
+  kbl(caption = "White Wine")  %>%
+  kable_classic(full_width = T, html_font = "Cambria", "striped")%>%
+  kable_styling(bootstrap_options = c("hover", "condensed")) %>% 
+  scroll_box(width = "100%", height = "300px")
+```
+
+#### Remarks
+
+*Supervised Learning*
+
+- All models had satisfactory scores for our datasets.
+- KNN showed the highest balanced accuracy of all models before tuning.
+- Tuning our models increased not only accuracy but also balanced accuracy. Regression models also showed improvement in RMSE and MAE when tuned.
+- Models with Binary classification (Good-Bad) had better prediction quality for our dataset given the discrete numerical quality score.
+- ROC tuning improved balanced accuracy more than total accuracy.
+- Random Forest and Ranger had a huge impact on increasing accuracy of our Tree models (both classification and regression).
+- the Kappa did not however show major improvement after tuning except for Random Forest and Ranger.
+
+*Unsupervised Learning*
+
+In comparing our Balanced Vs Full Dataset:
+- No major significant difference was found in PCA, Clustering using AGNES, Kmeans or PAM.
+- It seemed that the more clusters are taken the more we see differences between balanced and unbalanced datasets.
+- Balanced datasets hinted at lower cluster recommendation but in a significant manner.
+
+#### Limitations
+
+Our main limitations were:
+
+- The smaller dataset of red wine compared to white wine
+- The balanced dataset was used for most supervised learning and a comparison was only drawn on unsupervised learning between the full and the balanced
+- Scaling the data from point zero, although sound, but might have affected some prediction accuracy for some models
+- Our dataset was transformed to predict binary Good-Bad Variables and the benchmark taken for good wine was 6+ for both red and white, this might have had big impact on the prediction outcomes and quality
+- The numerical score of quality is discrete , and limited between 3 and 9 which renders regression models not ideal for this kind of prediction and also makes binary classification models inapplicable 
+
+*Forward Note*
+
+It would be very interesting to see whether we can get a larger data set with scores that are continuous in nature (eg 0 to 100) and try to check the difference in accuracy in supervised models between a balanced and non-balanced one.
+
+Another interesting topic would be to try to predict alcohol levels for example or acidity levels in a certain wine given the other factors.
+
+Moreover, the dataset used only "intrinsic" variables, whereas other variables such as the price of a bottle probably play a big role in wine appreciation, depending on the tasting and scoring process (blind or not, at home or at the vinyard, etc.).
+
+Finally, a multi-class model could be used to try to classify non-binary outcomes of quality, price and other factors.

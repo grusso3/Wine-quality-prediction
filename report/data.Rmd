@@ -1,0 +1,75 @@
+# Data
+
+```{r, echo = FALSE, message = FALSE, warning=FALSE}
+source(here::here("scripts/setup.R"))
+```
+
+```{r data_import}
+Rwine <- read_delim("../data/winequality-red.csv", 
+                       ";", escape_double = FALSE, trim_ws = TRUE)
+Wwine <- read_delim("../data/winequality-white.csv", 
+                       ";", escape_double = FALSE, trim_ws = TRUE)
+
+winequality_red <- Rwine %>%
+  mutate(Type = "red")
+
+winequality_white <- Wwine %>%
+  mutate(Type = "white")
+
+# One dataset with both wine
+winequality_fullwine <- rbind(winequality_red, winequality_white)
+```
+
+### Sources
+Two datasets were used as a reference. We used the [Wine Quality Data Set](https://archive.ics.uci.edu/ml/datasets/wine+quality) available on the UCI repository. These two datasets therefore include the red and white variants of the Portuguese Vinho Verde wine. 
+
+### Description
+The Red wine dataset contains 1599 instances for 12 features, including a
+quality feature which is an output variable based on sensory data with a score ranging from 0 to 10. The other features are input variable based on physicochemical tests and are as follows:
+
+- **fixed acidity** - *most acids involved with wine or fixed or nonvolatile (do not evaporate readily)*
+
+- **volatile acidity** - *the amount of acetic acid in wine, which at too high of levels can lead to an unpleasant, vinegar taste*
+
+- **citric acid** - *found in small quantities, citric acid can add ‘freshness’ and flavor to wines*
+
+- **residual sugar** - *the amount of sugar remaining after fermentation stops, it’s rare to find wines with less than 1 gram/liter and wines with greater than 45 grams/liter are considered sweet*
+
+- **chlorides** - *the amount of salt in the wine*
+
+- **free sulfur dioxide** - *the free form of So2 exists in equilibrium between molecular So2 (as a dissolved gas) and bisulfite ion; it prevents microbial growth and the oxidation of wine*
+
+- **total sulfur dioxide** - *amount of free and bound forms of So2; in low concentrations, So2 is mostly undetectable in wine, but at free So2 concentrations over 50 ppm, So2 becomes evident in the nose and taste of wine*
+
+ - **density** - *the density of water is close to that of water depending on the percent alcohol and sugar content*
+ 
+ - **pH** - *describes how acidic or basic a wine is on a scale from 0 (very acidic) to 14 (very basic); most wines are between 3-4 on the pH scale*
+ 
+ - **sulphates** - *a wine additive which can contribute to sulfur dioxide gas (So2) levels, wich acts as an antimicrobial and antioxidant*
+ 
+  - **alcohol** - *the percent alcohol content of the wine*
+
+The table below shows the first 6 instances.
+
+##### Overview of the Red Wine Dataset
+```{r}
+head(Rwine) %>% 
+  kbl() %>%
+  kable_paper(bootstrap_options = "striped", full_width = F)%>%
+  kable_classic(full_width = T, html_font = "Cambria", "striped")%>%
+  kable_styling(bootstrap_options = c("hover", "condensed")) 
+```
+
+
+The second dataset is the one for White wines and contains 4898 instances with the same 12 features seen above. 
+
+##### Overview of the White Wine Dataset
+```{r}
+head(Wwine) %>% 
+  kbl() %>%
+  kable_paper(bootstrap_options = "striped", full_width = F)%>%
+  kable_classic(full_width = T, html_font = "Cambria", "striped")%>%
+  kable_styling(bootstrap_options = c("hover", "condensed")) 
+```
+
+As the datasets were downloaded from Kaggle, they are very clean. Actually, they do not contain any missing values, so we do not need to do anything further but scale data later, and hence we are good to proceed for the next steps.

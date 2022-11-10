@@ -1,0 +1,186 @@
+# Exploratory data analysis
+
+```{r, echo = FALSE, message = FALSE, warning=F}
+source(here::here("scripts/setup.R"))
+
+```
+
+### Red vs. White - Quality
+
+In this section, we will first look at the distribution of the quality scores received by the two types of wines (i.e. red or white) as well as the overall distribution.
+
+The first important point to note here is that none of the wines received the highest score (i.e., 10) or a quality score below 3. In addition, it can be observed that only a few white wines can be qualified as exceptional since they received a score of 9 while no red wine had this honor (only 5 wines received a score of 9 while 30 wines received a score of 3). 
+
+Overall, a fairly clear trend can be defined for both types of wine. It appears that the vast majority of wines received a score of 5 or 6. Thus, we can draw a first conclusion that a wine with a score of 4 can be defined as bad, a score of 5 being an average wine, a score of 6 a good wine, then excellent for a score of 7, and finally the scores of 8-9 are reserved for the vintage wines.
+
+In other words, it is difficult here to draw any other conclusion than the one that one would expect, namely that the majority of the wines can be classified as average or good. It would seem that in general a white wine is more easily classified in the latter category while a red wine is judged rather equally between these two categories. 
+
+
+```{r}
+# Distribution of the wine quality
+par(mfrow = c(1,3))
+par(pin=c(1.7,2))              
+
+hist(winequality_red$quality, #Red
+     main="Red wine", 
+     xlab="Quality", 
+     border="white", 
+     col="red",
+     xlim=c(3,9),
+     las=1, 
+     breaks=4)
+
+hist(winequality_white$quality, #White
+     main="White wine", 
+     xlab="Quality", 
+     border="red", 
+     col="white",
+     xlim=c(3,9),
+     las=1, 
+     breaks=8)
+
+hist(winequality_fullwine$quality, #Red&White
+     main="Total distibution", 
+     xlab="Quality", 
+     border="white", 
+     col="pink",
+     xlim=c(3,9),
+     las=1, 
+     breaks=8)
+```
+
+### Features distibution
+
+Then, although the distribution of the different variables have all been plotted. It is interesting here to focus on the following: volatile acidity, citric acid, total sulfur dioxide, pH, and alcohol.
+
+To start with the *volatile acidity*: as previously mentioned, it has been observed that a level too high could lead to an unpleasant,vinegar taste. In this case, most of the wines have a *volatile acidity* below (0.8).
+
+Regarding *citric acid*, we know that in small quantities it adds freshness and flavor to wines. It is therefore not surprising to find it in wine in small quantities ranging from 0 to 0.75 (g/dm3).
+
+Again, in low concentrations, *total sulfur dioxide* (So2) is mostly undetectable in wine, but at free So2 concentrations over 50 ppm, So2 becomes evident in the nose and taste of wine. We see here very clearly a distinction in the distribution.
+
+To finish with the two features that speak to most people, *pH* and *alcohol*, usually wines are between 3-4 on the pH scale which can be observed for the wines present in our dataset with a tendency towards the lower range. The *alcohol* content is certainly the best known measure, with a range of 8 to 14 percent alcohol for our wines. 
+
+
+```{r, echo=FALSE, warning=FALSE}
+melt.winequality_fullwine <- reshape2::melt(winequality_fullwine)
+```
+
+```{r}
+ggplot(data = melt.winequality_fullwine, aes(x = value)) + 
+  stat_density() + 
+  facet_wrap(~variable, scales = "free")
+```
+
+### Correlation matrix
+
+The strongest correlation is found to be between free sulfure dioxide-total sulfur dioxide (0.72) followed by alcohol-density (-0.69) and residual sugar-density (0.55). These sets of features seems to all have more than meaningful correlation (>0.5).
+
+
+```{r, echo=FALSE}
+# We want to plot the correlation matrix
+# We first need to remove the non-numerical column and change the name
+# of each column to make the plot more readable
+
+wine_corr <- winequality_fullwine[, -13] %>%
+  rename("fa" = "fixed acidity", "va" = "volatile acidity", 
+         "ca" = "citric acid", "rs" = "residual sugar",
+         "chl" = "chlorides", "fsd" = "free sulfur dioxide",
+         "tsf" = "total sulfur dioxide", "ds" = "density",
+         "sul" = "sulphates", "alc" = "alcohol", "qua" = "quality")
+
+# Compute the correlation matrix and then plot it
+M <- cor(wine_corr)
+```
+
+```{r}
+corrplot.mixed(M, lower.col = "black", number.cex = .7, 
+               order = "hclust", hclust.method = "complete",  tl.offset = 3) # complete linkage clustering method
+```
+
+### Quality vs. features exploration
+
+```{r, echo=FALSE}
+#Relationship between quality & other variables - Boxplots
+## Feel free to arrange the code in a more efficient way if u know 
+b1_fixed_acidity <- ggplot(winequality_fullwine, aes(factor(quality), `fixed acidity`, fill=factor(quality))) + 
+  geom_boxplot() +
+  labs(x = "quality", y = "fixed acidity", title = "Quality vs. fixed acidity") + 
+  theme(legend.position = 'none', plot.title = element_text(size = 9, hjust=0.5, face="bold"))
+
+b2_volatile_acidity <- ggplot(winequality_fullwine, aes(factor(quality), `volatile acidity`, fill=factor(quality))) + 
+  geom_boxplot() +
+  labs(x = "quality", y = "volatile acidity", title = "Quality vs. volatile acidity") + 
+  theme(legend.position = 'none', plot.title = element_text(size = 9, hjust=0.5, face="bold"))
+
+b3_citric_acid <- ggplot(winequality_fullwine, aes(factor(quality), `citric acid`, fill=factor(quality))) + 
+  geom_boxplot() +
+  labs(x = "quality", y = "citric acid", title = "Quality vs. citric acid") + 
+  theme(legend.position = 'none', plot.title = element_text(size = 9, hjust=0.5, face="bold"))
+
+b4_residual_sugar <- ggplot(winequality_fullwine, aes(factor(quality), `residual sugar`, fill=factor(quality))) + 
+  geom_boxplot() +
+  labs(x = "quality", y = "residual sugar", title = "Quality vs. residual sugar") + 
+  theme(legend.position = 'none', plot.title = element_text(size = 9, hjust=0.5, face="bold"))
+
+b5_chlorides <- ggplot(winequality_fullwine, aes(factor(quality), `chlorides`, fill=factor(quality))) + 
+  geom_boxplot() +
+  labs(x = "quality", y = "chlorides", title = "Quality vs. chlorides") + 
+  theme(legend.position = 'none', plot.title = element_text(size = 9, hjust=0.5, face="bold"))
+
+b6_free_sulfur_dioxide <- ggplot(winequality_fullwine, aes(factor(quality), `free sulfur dioxide`, fill=factor(quality))) + 
+  geom_boxplot() +
+  labs(x = "quality", y = "free sulfur dioxide", title = "Quality vs. free sulfur dioxide") + 
+  theme(legend.position = 'none', plot.title = element_text(size = 9, hjust=0.5, face="bold"))
+
+b7_total_sulfur_dioxide <- ggplot(winequality_fullwine, aes(factor(quality), `total sulfur dioxide`, fill=factor(quality))) + 
+  geom_boxplot() +
+  labs(x = "quality", y = "total sulfur dioxide", title = "Quality vs. total sulfur dioxide") + 
+  theme(legend.position = 'none', plot.title = element_text(size = 9, hjust=0.5, face="bold"))
+
+b8_density <- ggplot(winequality_fullwine, aes(factor(quality), `density`, fill=factor(quality))) + 
+  geom_boxplot() +
+  labs(x = "quality", y = "density", title = "Quality vs. density") + 
+  theme(legend.position = 'none', plot.title = element_text(size = 9, hjust=0.5, face="bold"))
+
+b9_pH <- ggplot(winequality_fullwine, aes(factor(quality), `pH`, fill=factor(quality))) + 
+  geom_boxplot() +
+  labs(x = "quality", y = "pH", title = "Quality vs. pH") + 
+  theme(legend.position = 'none', plot.title = element_text(size = 9, hjust=0.5, face="bold"))
+
+b10_sulphates <- ggplot(winequality_fullwine, aes(factor(quality), `sulphates`, fill=factor(quality))) + 
+  geom_boxplot() +
+  labs(x = "quality", y = "sulphates", title = "Quality vs. sulphates") + 
+  theme(legend.position = 'none', plot.title = element_text(size = 9, hjust=0.5, face="bold"))
+
+b11_alcohol <- ggplot(winequality_fullwine, aes(factor(quality), `alcohol`, fill=factor(quality))) + 
+  geom_boxplot() +
+  labs(x = "quality", y = "alcohol", title = "Quality vs. alcohol") + 
+  theme(legend.position = 'none', plot.title = element_text(size = 9, hjust=0.5, face="bold"))
+```
+
+
+The median values here show a slight downward trend for *fixed acidity* and *volatile acidity* the higher the wines were rated, while it is the opposite trend for *citric acid*. Since *volatile acidity* at higher level increases unpleasant vinegar like taste, it can be inferred that *volatile acidity* generally decreases quality. 
+
+```{r}
+ggarrange(b1_fixed_acidity, b2_volatile_acidity, 
+          b3_citric_acid,widths = 2, heights = 3,
+          nrow = 1, ncol = 3)
+````
+
+
+Higher *free sulfur dioxide* prevents microbial growth and the oxidation of wine. This is why wines with higher concentrations tend to be of better quality. In addition, a fairly clear trend can be identified here. As explained above, the amount of *residual sugar* and *chlorides* do not allow a difference between a good and a bad wine.
+
+```{r}
+ggarrange(b4_residual_sugar,b5_chlorides,b6_free_sulfur_dioxide,
+          nrow = 1, ncol = 3,widths = 2, heights = 3)
+````
+
+
+```{r}
+ggarrange(b7_total_sulfur_dioxide, b8_density,
+          b9_pH,
+          nrow = 1, ncol = 3,widths = 2, heights = 3)
+````
+
+

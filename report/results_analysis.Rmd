@@ -1,0 +1,64 @@
+# Results 
+
+```{r, echo = FALSE, message = FALSE}
+source(here::here("scripts/setup.R"))
+```
+
+```{r, echo = FALSE, include=FALSE}
+makeStats <- function(stats = c("Accuracy", "Balanced Accuracy", "Kappa", "Sensitivity", "Specificity")){
+  temp <- tibble("Method" = character())
+  for(stat in stats) temp <- cbind(temp, tibble("." = numeric()))
+  colnames(temp) <- c("Method", stats)
+  return(temp)
+}
+
+addStats <- function(Stats, method, cM){
+  Stats <- Stats %>% 
+    add_row(Method = method,
+            Accuracy = cM$overall["Accuracy"],
+            `Balanced Accuracy` = cM$byClass["Balanced Accuracy"],
+            Kappa = cM$overall["Kappa"],
+            Sensitivity = cM$byClass["Sensitivity"],
+            Specificity = cM$byClass["Specificity"]
+    ) %>%
+    as_tibble()
+  return(Stats)
+}
+
+R.CM <- list()
+R.CM$bs <- confusionMatrix(as.factor(R.bs.pred), as.factor(R.te$qlty.cat))
+R.CM$cv <- confusionMatrix(as.factor(R.cv.pred), as.factor(R.te$qlty.cat))
+R.CM$glm <- confusionMatrix(as.factor(R.glm.pred), as.factor(R.te$qlty.cat))
+R.CM$knn <- confusionMatrix(as.factor(R.knn.pred), as.factor(R.te$qlty.cat))
+R.CM$nb <- confusionMatrix(as.factor(R.nb.pred), as.factor(R.te$qlty.cat))
+R.CM$nbprior <- confusionMatrix(as.factor(R.nbprior.pred), as.factor(R.te$qlty.cat))
+R.CM$svm <- confusionMatrix(as.factor(R.svm.pred), as.factor(R.te$qlty.cat))
+R.CM$svmpol <- confusionMatrix(as.factor(R.svmpol.pred), as.factor(R.te$qlty.cat))
+R.CM$svmrad <- confusionMatrix(as.factor(R.svmrad.pred), as.factor(R.te$qlty.cat))
+R.CM$svmrad2 <- confusionMatrix(as.factor(R.svmrad2.pred), as.factor(R.te$qlty.cat))
+R.CM$tree <- confusionMatrix(as.factor(R.tree.pred), as.factor(R.te$qlty.cat))
+
+
+R.stats <- makeStats() %>% 
+  addStats(method = "Bootstrapping", cM = R.CM$bs) %>%
+  addStats(method = "Cross-validation", cM = R.CM$cv) %>%
+  addStats(method = "GLM", cM = R.CM$glm) %>%
+  addStats(method = "K-NN", cM = R.CM$knn) %>%
+  addStats(method = "Naive-Bayes", cM = R.CM$nb) %>%
+  addStats(method = "Naive-Bayes (with priors)", cM = R.CM$nbprior) %>%
+  addStats(method = "SVM", cM = R.CM$svm) %>%
+  addStats(method = "SVM (pol)", cM = R.CM$svmpol) %>%
+  addStats(method = "SVM (rad)", cM = R.CM$svmrad) %>%
+  addStats(method = "SVM (rad 2)", cM = R.CM$svmrad2) %>%
+  addStats(method = "Tree", cM = R.CM$tree)
+```
+
+This section presents the modeling results and discusses our models performance. We will discuss in detail some of the potential reasons why certain methods we proposed are performing much better than the other methods.
+
+If we compare our models we can see that the best results were obtained with PUT HERE MODEL and its highest values in term of accuracy and balanced accuracy. 
+
+```{r, echo = FALSE, include=TRUE}
+R.stats %>%
+  kbl(caption = "Summary Table") %>%
+  kable_classic(full_width = F, html_font = "Cambria")
+```

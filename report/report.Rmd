@@ -1,0 +1,12 @@
+---
+title: "Machine Learning at the service of the vineyard"
+author: "Allan Mivelaz, Mazen Nasser, Giacomo Russo, Vincent Saudan, Adrian van Kampen"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output:
+  html_document: default
+  pdf_document: default
+  word_document: default
+---
+
+```{r child = c('intro.Rmd', 'data.Rmd', 'eda.Rmd', 'data_management.Rmd', 'supervised_analysis.Rmd', 'unsupervised_analysis.Rmd', 'varimp.Rmd' , 'concl.Rmd'), warning  = FALSE}
+```

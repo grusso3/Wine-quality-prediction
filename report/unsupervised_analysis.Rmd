@@ -1,0 +1,531 @@
+# Unsupervised Learning Analysis
+
+```{r, echo = FALSE, message = FALSE}
+source(here::here("scripts/setup.R"))
+```
+
+```{r, echo = FALSE, include=FALSE, warning=FALSE}
+######################3
+###CLUSTERING
+######################
+
+
+# ----------------------- RED -------------------
+# Hierarchical  CLustering - AGNES
+
+#on the whole Red wine dataset
+R.dist <- dist(Rwine[,-c(12,13)], method = "euclidean") 
+
+
+R.melt <- reshape2::melt(as.matrix(R.dist)) 
+
+# Comparing to a balanced training set
+R.tr.dist <- dist(R.tr[,-c(12,13)], method = "euclidean") 
+
+R.tr.melt <- reshape2::melt(as.matrix(R.tr.dist)) 
+
+# Dendogram
+# fullset
+R.hc <- hclust(R.dist, method = "ward.D")
+plot(R.hc, hang=-1)
+
+# We can cut to 4 clusters
+
+rect.hclust(R.hc, k=4)
+R.4c <- cutree(R.hc, k=4)
+R.4c
+
+# Analysis
+
+R.comp <-  reshape2::melt(data.frame(Rwine[,-c(12,13)], Clust=factor(R.4c),
+                           Id=row.names(Rwine)), id=c("Id", "Clust"))
+
+# Training balanced set
+R.tr.hc <- hclust(R.tr.dist, method = "ward.D")
+plot(R.tr.hc, hang=-1)
+
+# We can cut to 3 big clusters
+
+rect.hclust(R.tr.hc, k=3)
+R.tr.3c <- cutree(R.tr.hc, k=3)
+R.tr.3c
+
+# Analysis
+
+R.tr.comp <-  reshape2::melt(data.frame(R.tr[,-c(12,13)], Clust=factor(R.tr.3c),
+                           Id=row.names(R.tr)), id=c("Id", "Clust"))
+
+###cluster 1 = all the acids + ph
+##clust 2 : res sugar - sulfur diox
+### clust 3 = acids + alcohol + sulphates
+
+# Visualizing the clusters on Full set
+R.km <- kmeans(Rwine[,-c(12,13)], centers=2)
+R.km$cluster 
+
+
+# Visualizing the clusters on balanced training set
+R.tr.km <- kmeans(R.tr[,-c(12,13)], centers=3)
+R.tr.km$cluster 
+
+# Fullset at k=5
+R.pam <- pam(Rwine[,-c(12,13)], k=5)
+R.pam
+
+# Balanced set at k=3
+R.tr.pam <- pam(R.tr[,-c(12,13)], k=3)
+R.tr.pam
+
+
+# ----------------------- WHITE -------------------
+# Hierarchical  CLustering - AGNES
+
+#on the whole Red wine dataset
+W.dist <- dist(Wwine[,-c(12,13)], method = "euclidean") 
+
+
+W.melt <- melt(as.matrix(W.dist)) 
+
+
+# Comparing to a balanced training set
+W.tr.dist <- dist(W.tr[,-c(12,13)], method = "euclidean") 
+
+W.tr.melt <- reshape2::melt(as.matrix(W.tr.dist)) 
+
+
+# Dendogram
+# fullset
+
+W.hc <- hclust(W.dist, method = "ward.D")
+plot(W.hc, hang=-1)
+
+# We can cut to 4 clusters
+
+rect.hclust(W.hc, k=4)
+W.4c <- cutree(W.hc, k=4)
+W.4c
+
+# Analysis
+
+W.comp <-  reshape2::melt(data.frame(Wwine[,-c(12,13)], Clust=factor(W.4c),
+                           Id=row.names(Wwine)), id=c("Id", "Clust"))
+
+# Training balanced set
+W.tr.hc <- hclust(W.tr.dist, method = "ward.D")
+plot(W.tr.hc, hang=-1)
+
+# We can cut to 3 big clusters
+
+rect.hclust(W.tr.hc, k=3)
+W.tr.3c <- cutree(W.tr.hc, k=3)
+W.tr.3c
+
+# Analysis
+
+W.tr.comp <-  reshape2::melt(data.frame(W.tr[,-c(12,13)], Clust=factor(W.tr.3c),
+                              Id=row.names(W.tr)), id=c("Id", "Clust"))
+
+###cluster 1 = citric + res sug + total suf + density
+##clust 2 : ph + vol  aciditiy
+### clust 3 = free sulf + alcohol
+
+
+# Visualizing the clusters on Full set
+W.km <- kmeans(Wwine[,-c(12,13)], centers=3)
+W.km$cluster 
+
+
+
+# Visualizing the clusters on balanced training set
+W.tr.km <- kmeans(W.tr[,-c(12,13)], centers=3)
+W.tr.km$cluster 
+
+
+# Kmeans on the whole dataset work better
+
+# Fullset at k=5
+W.pam <- pam(Wwine[,-c(12,13)], k=5)
+W.pam
+
+plot(silhouette(W.pam), border = NA)
+
+
+# Balanced set at k=3
+W.tr.pam <- pam(W.tr[,-c(12,13)], k=3)
+W.tr.pam
+
+plot(silhouette(W.tr.pam), border = NA) # Improvement given balanced set
+```
+
+Given that the Wine Dataset was already used in class in Unsupervised Learning, we decided to go further in our choices of methods and analysis of the datasets.
+
+### Clustering
+
+We have conducted a full clustering model using the whole dataset and compared it to our BALANCED training set for both RED and WHITE wine data in order to see whether Sub-Sampling the data provides any added-value to our models.
+
+#### Hierarchical Clustering - AGNES
+
+In this model we will be using the Euclidean distance and will be linking the clusters using the WARD method to minimize total "within" sum of squares (unlike the manhattan and complete linkage used in class)
+
+For the AGNES method in clustering we will only Use our *Red Wine* Dataset, although we analyzed both in our codes.
+
+**Full Dataset**
+
+At a height of 250 we can split our dendogram to 4 main clusters
+
+```{r, echo = FALSE, include=TRUE, warning = FALSE}
+R.hc <- hclust(R.dist, method = "ward.D")
+plot(R.hc, hang=-1)
+
+# We can cut to 4 clusters
+
+rect.hclust(R.hc, k=4)
+R.4c <- cutree(R.hc, k=4)
+
+
+```
+
+
+We also conduct a component Analysis to check the Variable representation in each cluster
+```{r, echo = FALSE, include=TRUE, warning = FALSE}
+ggplot(R.comp, aes(y=value, group=Clust, fill=Clust)) + ggtitle("Red Wine - Component analysis - 4 clusters") +
+  geom_boxplot() +
+  facet_wrap(~variable, ncol=4, nrow=3)
+```
+
+
+**Balanced Set**
+Using our training dataset which is 50-50 balanced we follow the same method.
+This time at the same height of 250 we cut into 3 clusters
+
+```{r, echo = FALSE, include=TRUE, warning = FALSE}
+R.tr.hc <- hclust(R.tr.dist, method = "ward.D")
+plot(R.tr.hc, hang=-1)
+
+# We can cut to 3 big clusters
+
+rect.hclust(R.tr.hc, k=3)
+R.tr.3c <- cutree(R.tr.hc, k=3)
+
+```
+
+Moreover, we can see more clarity in variable importance and representation with 3 clusters
+
+```{r, echo = FALSE, include=TRUE, warning = FALSE}
+ggplot(R.tr.comp, aes(y=value, group=Clust, fill=Clust)) + ggtitle("Component analysis of 3 clusters plot") +
+  geom_boxplot() +
+  facet_wrap(~variable, ncol=4, nrow=3)
+```
+
+**Optimal Cluster Choice**
+
+We will just portray the WSS and Silhouette methods for cluster numbers for both our Full Red dataset and our Balanced Dataset
+```{r, echo = FALSE, include=TRUE, warning = FALSE}
+grid.arrange(
+fviz_nbclust(Rwine[,-c(12,13)],
+             hcut, hc_method="ward.D",
+             hc_metric="euclidean",
+             method = "wss", 
+             k.max = 15, verbose = FALSE)+
+labs(title= "Optimal Num. of clusters") + 
+xlab("Number of cluster k") +
+ylab("Average WSS"), # su
+# Balanced tr set wss
+fviz_nbclust(R.tr[,-c(12,13)],
+             hcut, hc_method="ward.D",
+             hc_metric="euclidean",
+             method = "wss", 
+             k.max = 15, verbose = FALSE)+
+labs(title= "Optimal Num. of clusters") + 
+xlab("Number of cluster k") +
+ylab("Average WSS"), # m
+# fullset silhouette
+fviz_nbclust(Rwine[,-c(12,13)],
+             hcut, hc_method="ward.D",
+             hc_metric="euclidean",
+             method = "silhouette", 
+             k.max = 15, verbose = FALSE) +
+labs(title= "Optimal Num. of clusters") + 
+xlab("Number of cluster k") +
+ylab("Avg silhouette width"),#
+
+fviz_nbclust(R.tr[,-c(12,13)],
+             hcut, hc_method="ward.D",
+             hc_metric="euclidean",
+             method = "silhouette", 
+             k.max = 15, verbose = FALSE)+
+labs(title= "Optimal Num. of clusters") + 
+xlab("Number of cluster k") +
+ylab("Avg silhouette width"),
+nrow = 2, ncol = 2, top = "Unbalanced Vs Balanced")#
+```
+
+**Notes** Not much difference in between the two sets. Same thing for the White wine datasets, not a significant difference.
+Both balanced and full set optimise at 2 clusters although the WSS might suggested more (4-5)
+
+
+#### Partitionning 
+
+##### K-MEANS
+
+For our K-means we will only portray the analysis on the White Wine dataset
+
+We will focus the difference between balanced and unbalanced dataset using also wss and silhouette
+```{r, echo = FALSE, include=TRUE, warning = FALSE}
+grid.arrange(
+fviz_nbclust(Wwine[,-c(12,13)],
+             kmeans,
+             method = "wss", 
+             k.max = 15, verbose = FALSE)+
+labs(title= "Optimal Num. of clusters") + 
+xlab("Number of cluster k") +
+ylab("Average WSS"), # suggest 5 clusters
+# Balanced tr set wss
+fviz_nbclust(W.tr[,-c(12,13)],
+             kmeans,
+             method = "wss", 
+             k.max = 15, verbose = FALSE)+
+labs(title= "Optimal Num. of clusters") + 
+xlab("Number of cluster k") +
+ylab("Average WSS"), # maybe at 3
+# fullset silhouette
+fviz_nbclust(Wwine[,-c(12,13)],
+             kmeans,
+             method = "silhouette", 
+             k.max = 15, verbose = FALSE)+
+labs(title= "Optimal Num. of clusters") + 
+xlab("Number of cluster k") +
+ylab("Avg silhouette width"),# suggests 2 or 5-6 clusters
+
+fviz_nbclust(W.tr[,-c(12,13)],
+             kmeans,
+             method = "silhouette", 
+             k.max = 15, verbose = FALSE)+
+labs(title= "Optimal Num. of clusters") + 
+xlab("Number of cluster k") +
+ylab("Avg silhouette width"),
+nrow = 2, ncol = 2, top = "Unbalanced Vs Balanced")# suggests 2-3 cluster
+```
+
+Taking 2 clusters  for the balanced and visualizing them graphically:
+
+```{r, echo = FALSE, include=TRUE, warning = FALSE, warning=FALSE}
+W.tr.km <- kmeans(W.tr[,-c(12,13)], centers=3)
+W.km <- kmeans(Wwine[,-c(12,13)], centers=3)
+grid.arrange(
+fviz_cluster(W.tr.km, data = W.tr[, - c(12,13)],
+             col = rainbow(5), 
+             geom = "point",
+             ellipse.type = "convex", 
+             ggtheme = theme_bw()
+),
+fviz_cluster(W.km, data = Wwine[, - c(12,13)],
+             col = rainbow(5), 
+             geom = "point",
+             ellipse.type = "convex", 
+             ggtheme = theme_bw()), 
+nrow=1, ncol =2, top = "Balanced Vs Unbalanced")
+```
+Again we see no major difference between using a balanced and unbalanced dataset while clustering under Kmeans method with 2 clusters.
+
+##### PAM
+
+We also conducted a PAM analysis for our data sets and also compared between the balanced and unbalanced full set.
+We will take the Red wine data set for this analysis
+
+```{r, echo = FALSE, include=TRUE, warning = FALSE}
+grid.arrange(
+fviz_nbclust(Rwine[,-c(12,13)],
+             pam,
+             method = "wss", 
+             k.max = 15, verbose = FALSE)+
+labs(title= "Optimal Num. of clusters") + 
+xlab("Number of cluster k") +
+ylab("Average WSS"), # su
+# Balanced tr set wss
+fviz_nbclust(R.tr[,-c(12,13)],
+             pam,
+             method = "wss", 
+             k.max = 15, verbose = FALSE)+
+labs(title= "Optimal Num. of clusters") + 
+xlab("Number of cluster k") +
+ylab("Average WSS"), # m
+# fullset silhouette
+fviz_nbclust(Rwine[,-c(12,13)],
+             pam,
+             method = "silhouette", 
+             k.max = 15, verbose = FALSE) +
+labs(title= "Optimal Num. of clusters") + 
+xlab("Number of cluster k") +
+ylab("Avg silhouette width"),#
+
+fviz_nbclust(R.tr[,-c(12,13)],
+             pam,
+             method = "silhouette", 
+             k.max = 15, verbose = FALSE)+
+labs(title= "Optimal Num. of clusters") + 
+xlab("Number of cluster k") +
+ylab("Avg silhouette width"),
+nrow = 2, ncol = 2, top = "Unbalanced Vs Balanced")#
+```
+
+Also no major difference but it seems the balanced dataset hints more at lower number of clusters compared to the unbalanced full set.
+
+Let us visualize using the Silhouette plot to check the effect of cluster number on our data classification.
+
+Using 4 clusters we try to see if there is any difference in our 2 sets.
+
+```{r, echo = FALSE, include=TRUE, warning = FALSE, warning=FALSE}
+R.pam <- pam(Rwine[,-c(12,13)], k=4)
+R.tr.pam <- pam(R.tr[,-c(12,13)], k=4)
+
+plot(silhouette(R.pam), border = NA, main= "Full Set")
+plot(silhouette(R.tr.pam), border = NA, main= "Balanced Set")
+# Improvement given blanced set
+```
+
+*Note* the Full set has slightly larger width, but has overall fewer misclasifications compared to our balanced dataset
+
+
+### Principal Component Analysis
+```{r, echo = FALSE, include=FALSE, warning=FALSE}
+#=========================================================
+#============ Principal component analysis ==============
+#=========================================================
+
+
+# ------------------RED---------------------
+
+#correlation plot
+ggcorrplot(cor(Rwine[,-c(12,13)]),method = "circle", 
+           outline.color =  "blue", ggtheme ="theme_dark", pch =4)
+
+# Full set PCA
+
+R.pca <- PCA(Rwine[,-c(12,13)],ncp = 7, graph = FALSE)
+summary(R.pca)
+summary(prcomp(Rwine[,-c(12,13)], scale=TRUE)) # 5-6 dimensions
+
+# Balanced Set PCA
+
+R.tr.pca <- PCA(R.tr[,-c(12,13)],ncp = 7, graph = FALSE)
+summary(R.tr.pca)
+summary(prcomp(R.tr[,-c(12,13)], scale=TRUE)) # 5-6 dimensions
+
+#### FACTOR Analysis#####
+# on the full set
+
+nfact <- 6
+
+R.fa <- factanal(Rwine[,-(12:13)], factors =nfact ,rotation="none")
+print(R.fa,digits=2,cutoff=.3,sort=T) # 74% Var explained
+
+R.fapm <- factanal(Rwine[,-(12:13)], 
+                        factors =nfact ,rotation="promax")
+print(R.fapm$loadings,digits=2,cutoff=.3,sort=T) # 76% explained var
+
+
+# on the balanced set
+R.tr.fa <- factanal(R.tr[,-(12:13)], factors =nfact ,rotation="none")
+print(R.tr.fa,digits=2,cutoff=.3,sort=T) # 74% Var explained
+
+R.tr.fapm <- factanal(R.tr[,-(12:13)], 
+                   factors =nfact ,rotation="promax")
+print(R.tr.fapm$loadings,digits=2,cutoff=.3,sort=T) # 76% explained var
+
+
+
+# ------------------WHITE--------------------
+
+
+#correlation plot
+ggcorrplot(cor(Wwine[,-c(12,13)]),method = "circle", 
+           outline.color =  "blue", ggtheme ="theme_dark", pch =4)
+
+# Full set PCA
+
+W.pca <- PCA(Wwine[,-c(12,13)],ncp = 7, graph = FALSE)
+summary(W.pca)
+summary(prcomp(Wwine[,-c(12,13)], scale=TRUE)) # 5-6 dimensions
+# Balanced Set PCA
+
+W.tr.pca <- PCA(W.tr[,-c(12,13)],ncp = 7, graph = FALSE)
+summary(W.tr.pca)
+summary(prcomp(W.tr[,-c(12,13)], scale=TRUE)) # 5-6 dimensions
+
+#### FACTOW Analysis#####
+# on the full set
+
+
+W.fa <- factanal(Wwine[,-(12:13)], factors =nfact ,rotation="none")
+print(W.fa,digits=2,cutoff=.3,sort=T) # 66% Var explained
+
+W.fapm <- factanal(Wwine[,-(12:13)], 
+                   factors =nfact ,rotation="promax")
+print(W.fapm,digits=2,cutoff=.3,sort=T) # 66% explained var
+
+# on the balanced set
+W.tr.fa <- factanal(W.tr[,-(12:13)], factors =nfact ,rotation="none")
+print(W.tr.fa,digits=2,cutoff=.3,sort=T) # 68% Var explained
+
+W.tr.fapm <- factanal(W.tr[,-(12:13)], 
+                      factors =nfact ,rotation="promax")
+print(W.tr.fapm,digits=2,cutoff=.3,sort=T) # 67% explained var
+```
+
+We have created summary graphs, fully comprehensive, for PCA testing one for each of the Full data set and the balanced training set for both Red and white wine.
+
+Here are the results:
+
+
+**Red Wine**
+
+```{r, echo = FALSE, include=TRUE, warning = FALSE, fig.width = 10, out.width="90%"}
+grid.arrange((fviz_pca_var(R.tr.pca,col.var="contrib",
+                           gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),  repel = T )),
+             (fviz_eig(R.tr.pca, addlabels = TRUE)),
+nrow = 1, ncol=2, heights= 2, widths= c(2,2))
+             
+```
+
+Two principal components already represent 50% of the variance. Taking 3 more would bring that close to 80%, which is a significant dimension reduction.
+
+The first dimension is positively correlated with fixed acidity and citric acid, and negatively with pH (which is un-suprising, since high acidity means a low pH in general). Conversely, the second PC seems to represent levels of sulfur dioxides, while being negatively correlated with alcohol.
+
+
+**White Wine**
+
+```{r, echo = FALSE, include=TRUE, warning = FALSE, fig.width = 10, out.width="90%"}
+grid.arrange((fviz_pca_var(W.tr.pca,col.var="contrib",
+                           gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),  repel = T)),
+             (fviz_eig(W.tr.pca, addlabels = T)),
+nrow = 1, ncol=2, heights= 2, widths= c(2,2))
+
+```
+
+For white wine, the first two PC also represent nearly 50% of variance. However, they seem flipped compared to red wine, with acidity (hence, pH also) having less variance than sulfur dioxides, residual sugar (logically negatively correlated with alcohol), and density.
+
+Although we performed these analyses on the balanced sets, the full sets showed very similar results, while needing more computational power (since they are larger), hence the reason why we show only balanced sets analysis.
+
+
+For white wine, although the order of variables are different than for red wines, we also see no significant difference between our balanced set and our full set.
+
+Taken together, this seems to suggest that using our balanced sets (which are smaller than our full set) yields a good picture of the full sets. This could be used to reduce computational needs for further analysis.
+
+#### Factor Analysis
+
+Performing factor analysis on both white and red wines show strikingly similar results to PCA, confirming the previous results.
+
+**Fullset - Red Wine**
+
+```{r, echo = FALSE, include=TRUE, warning = FALSE}
+print(R.fapm[2],digits=2,cutoff=.3,sort=T) # 76% explained var
+```
+
+**Balanced Set - White Wine** 
+
+```{r, echo = FALSE, include=TRUE, warning = FALSE}
+print(W.tr.fa[2],digits=2,cutoff=.3,sort=T) # 68% Var explained
+```
+
+*Notes One thing we can spot is that the different predicting variables do not have the same representation and importance equally for both Red and White dataset, the PCA plots and dimensions show some differences, hence why we proceed with checking Variable Important*

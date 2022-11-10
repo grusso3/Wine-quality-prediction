@@ -1,0 +1,188 @@
+# Data Management
+
+```{r, echo = FALSE, message = FALSE}
+source(here::here("scripts/setup.R"))
+```
+
+```{r, echo = FALSE,include=FALSE}
+# Scaling Data and making quality a score of 0-100
+Rwine <- as.data.frame(cbind(round(scale(Rwine[,-12]),3), Rwine[,12]))
+colnames(Rwine)[12] <- "quality"
+Wwine <- as.data.frame(cbind(round(scale(Wwine[,-12]),3), Wwine[,12]))
+colnames(Wwine)[12] <- "quality"
+
+
+# Adding a Binary Categorical variable for quality
+Rwine <- Rwine %>%
+  mutate(qlty.cat = ifelse(quality <6, "Bad","Good"))
+Rwine$qlty.cat <- as.factor(Rwine$qlty.cat)
+
+
+Wwine <- Wwine %>%
+  mutate(qlty.cat = ifelse(quality <6, "Bad","Good"))
+Wwine$qlty.cat <- as.factor(Wwine$qlty.cat)
+
+#merging red and white to form full set
+Awine <- rbind(Rwine %>% mutate(color = "red"), Wwine %>% mutate(color = "white"))
+
+#checking to see if there is a need for sub-sampling before splitting
+nrow(Rwine %>% filter(qlty.cat == "Bad")) #744
+nrow(Rwine %>% filter(qlty.cat == "Good")) #855
+nrow(Rwine)
+
+nrow(Wwine %>% filter(qlty.cat == "Bad")) #1640
+nrow(Wwine %>% filter(qlty.cat == "Good")) # 3258
+
+nrow(Awine %>% filter(alcohol > 0)) # 2846
+nrow(Awine %>% filter(alcohol <= 0)) # 3651
+
+
+# lets Sub-sample in order to rebalance our data for the training sets
+Rbad <- Rwine %>% filter(qlty.cat == "Bad")
+Rgood <- Rwine %>% filter(qlty.cat == "Good")
+Wbad <- Wwine %>% filter(qlty.cat == "Bad")
+Wgood <- Wwine %>% filter(qlty.cat == "Good")
+
+# Splitting Datasets
+set.seed(420)
+Rsplit.gd <- sample(x=1:nrow(Rgood), size=0.8*nrow(Rbad), replace=FALSE)
+Rsplit.bd <- sample(x=1:nrow(Rbad), size=0.8*nrow(Rbad), replace=FALSE)
+R.tr <- rbind(Rbad[Rsplit.bd,],Rgood[Rsplit.gd,])
+R.te <- Rwine[-(sample(x=1:nrow(Rwine), 
+                              size=0.8*nrow(Rwine), replace=FALSE)),]
+
+nrow(R.tr %>% filter(qlty.cat =="Bad")) # 595
+nrow(R.tr %>% filter(qlty.cat == "Good")) # 595
+# Dataset is balanced
+
+
+set.seed(420)
+Wsplit.gd <- sample(x=1:nrow(Wgood), size=0.8*nrow(Wbad), replace=FALSE)
+Wsplit.bd <- sample(x=1:nrow(Wbad), size=0.8*nrow(Wbad), replace=FALSE)
+W.tr <- rbind(Wbad[Wsplit.bd,],Wgood[Wsplit.gd,])
+W.te <- Wwine[-(sample(x=1:nrow(Wwine), 
+                       size=0.8*nrow(Wwine), replace=FALSE)),]
+
+nrow(W.tr %>% filter(qlty.cat =="Bad")) # 1312
+nrow(W.tr %>% filter(qlty.cat == "Good")) # 1312
+# Dataset is balanced
+
+
+### USe format X.yyy.zzz = Color.model/method.function
+#########################################
+## Cross Validation 
+#######################################
+
+#Using Categorical Quality as predicted variable
+
+train.cv <- trainControl(method = "cv", number=20)
+
+# RED
+set.seed(123)
+R.cv <- train(qlty.cat ~ ., data = R.tr[,-12], 
+                method = "glmStepAIC", family="binomial",
+                trControl=train.cv, trace=0)
+summary(R.cv)
+
+R.cv.pred <- predict(R.cv, newdata = R.te[,-12])
+confusionMatrix(data=as.factor(R.cv.pred),
+                reference = as.factor(R.te$qlty.cat))
+
+# White
+set.seed(123)
+W.cv <- train(qlty.cat ~ ., data = W.tr[,-12], 
+              method = "glmStepAIC", family="binomial",
+              trControl=train.cv, trace=0)
+summary(W.cv)
+
+W.cv.pred <- predict(W.cv, newdata = W.te[,-12])
+confusionMatrix(data=as.factor(W.cv.pred),
+                reference = as.factor(W.te$qlty.cat))
+
+
+###########################
+## Bootstrapping
+###########################
+train.bs <- trainControl(method = "boot632", number=30)
+
+#RED
+set.seed(346)
+R.bs <- train(qlty.cat ~., data = R.tr[,-12], method = "glmStepAIC", 
+                  family="binomial", trControl=train.bs, trace = 0)
+summary(R.bs)
+
+R.bs.pred <- predict(R.bs, newdata = R.te[,-12])
+confusionMatrix(data=as.factor(R.bs.pred), reference = as.factor(R.te$qlty.cat))
+
+train.bs <- trainControl(method = "boot632", number=30)
+
+#WHITE
+set.seed(346)
+W.bs <- train(qlty.cat ~., data = W.tr[,-12], method = "glmStepAIC", 
+              family="binomial", trControl=train.bs, trace = 0)
+summary(W.bs)
+
+W.bs.pred <- predict(W.bs, newdata = W.te[,-12])
+confusionMatrix(data=as.factor(W.bs.pred), reference = as.factor(W.te$qlty.cat))
+```
+
+### Categorical Data Transformation & Scaling
+
+First thing we did was feature scaling before creating any model. This will allow us to bring every feature in the same footing without any upfront importance. We have also added a binary categorical variable column. In other words, wines with a score strictly below 6 were categorized as "bad" while those with a score of 6 or higher were categorized as "good". 
+
+#### Data Splitting
+
+We have divided the data into two groups such as train data and test data using 80/20 ratio. We will train each classifier based on the trained data and predict the power of classifier on the test data. So, each classifier will be able to show all the performance metrics such as accuracy. We are also going to build many plots so that it will be easier to understand it in a better way.
+What we observe is that there are 744 red wines classified as "Bad" and 855 "Good", while 1640 white wines were categorized as "Bad" and 3258 "Good". 
+
+To make fair predictions, sampling is needed especially for white wine
+
+### Data Sub-Sampling
+
+We will transform our training set (but NOT testing set) to a more balanced and fair data to get the best sensitivity/specificity later on. We use a subsampling method in order to get 50%-50% Good-Bad classes for both Red and white Wine.
+
+Before sampling Training Sets:
+Red: Bad 744 - 855 Good
+White: Bad 1640 - 3258 Good
+
+
+After our sub- sampling:
+Red: Bad 595 - 595 Good
+White: Bad 1312 - 1312 Good
+
+Now both Training sets are balanced and we dont have prediciton bias in our models.
+
+
+### Cross Validation
+In order to make sure we have a solid training set we conducted a CV by training a model for 20 validations and tested on both red and white. 
+
+
+```{r, echo = FALSE, include=TRUE}
+rbind(as.matrix(confusionMatrix(data=as.factor(R.cv.pred),
+                reference = as.factor(R.te$qlty.cat))$overall[c(1,2)]),
+as.matrix(confusionMatrix(data=as.factor(R.cv.pred),
+                reference = as.factor(R.te$qlty.cat))$byClass[c(1,2,11)]))%>%
+  kbl(caption = "<b>C.V. Stats - Red Wine</b>") %>%
+  kable_classic(full_width = T, html_font = "Cambria", "striped")%>%
+  kable_styling(bootstrap_options = c("hover", "condensed"))
+```
+
+
+```{r, echo = FALSE, include=TRUE}
+rbind(as.matrix(confusionMatrix(data=as.factor(W.cv.pred),
+                reference = as.factor(W.te$qlty.cat))$overall[c(1,2)]),
+as.matrix(confusionMatrix(data=as.factor(W.cv.pred),
+                reference = as.factor(W.te$qlty.cat))$byClass[c(1,2,11)]))%>%
+  kbl(caption = "<b>C.V. Stats- White Wine</b>") %>%
+  kable_classic(full_width = T, html_font = "Cambria", "striped")%>%
+  kable_styling(bootstrap_options = c("hover", "condensed")) 
+```
+
+
+#### Bootstrap 
+
+We used the 632 method to avoid the fact that instances can be repeated in the training set and thus could create a bias.
+
+The results of the bootstrap method were approximately the same as the Cross Validation in terms of Accuracy measures.
+
+**Conclusion:** Our CV and Boostraping show us that the balanced training sets choices are good enough in accuracy to conduct further Machine Leaning models.

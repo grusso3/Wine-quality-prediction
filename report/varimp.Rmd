@@ -1,0 +1,151 @@
+# Variable Importance
+
+```{r, echo = FALSE, message = FALSE}
+source(here::here("scripts/setup.R"))
+```
+
+```{r, echo = FALSE, include=FALSE}
+########################
+##### Variable Importance
+########################
+
+
+# CHoosing Training Method
+
+train.varimp <- trainControl(method = "repeatedcv", repeats= 3, number=5)
+
+# ------------------RED----------------
+
+# Training on Logistic Reg with Step AIC
+
+R.varimp.glm <- train(form=qlty.cat~., data = R.tr[,-12],
+                           method = "glmStepAIC",
+                           trControl=train.varimp)
+
+
+# Using the already trained Radial SVM for Red wine
+R.svmrad.tune
+
+# Training on tree - numerical
+
+R.varimp.treenum <- train(form=quality~., data = R.tr[,-13],
+                             method = "ctree",
+                             trControl=train.varimp)
+
+# Training on tree - binary
+
+R.varimp.tree <- train(form=qlty.cat~., data = R.tr[,-12],
+                       method = "ctree",
+                       trControl=train.varimp)
+
+# Training on KNN
+
+R.varimp.knn <- train(form=qlty.cat~., data = R.tr[,-12],
+                              method = "knn",
+                              trControl=train.varimp)
+
+
+# Training on linear model
+
+R.varimp.lm <- train(form=quality~., data = R.tr[,-13],
+                      method = "lm",
+                      trControl=train.varimp)
+
+
+# ------------------WHITE----------------
+
+
+# Training on Logistic Reg with Step AIC
+
+W.varimp.glm <- train(form=qlty.cat~., data = W.tr[,-12],
+                      method = "glmStepAIC",
+                      trControl=train.varimp)
+
+
+# Using the white wine SVM polynomial
+
+W.svmpol.tune
+
+# Training on tree - numerical
+
+W.varimp.treenum <- train(form=quality~., data = W.tr[,-13],
+                          method = "ctree",
+                          trControl=train.varimp)
+
+# Training on tree - binary
+
+W.varimp.tree <- train(form=qlty.cat~., data = W.tr[,-12],
+                       method = "ctree",
+                       trControl=train.varimp)
+
+# Training on KNN
+
+W.varimp.knn <- train(form=qlty.cat~., data = W.tr[,-12],
+                      method = "knn",
+                      trControl=train.varimp)
+
+
+# Training on linear model
+
+W.varimp.lm <- train(form=quality~., data = W.tr[,-13],
+                     method = "lm",
+                     trControl=train.varimp)
+
+
+```
+
+
+
+Although Variable Importance is an important cornerstone of Machine Learning and should be conducted as analysis at the beginning of modeling to decide whether to add or drop independent variables from your predictive models, but we have still decided to include a small analysis on our Wine datasets to check whether the same variables are important for both Red and white wine quality prediction using different models.
+
+We use a training control of Repeated Cross-Validation with 3 repeats of 5 Validations and conducted the following model trainings:
+-Logisitic regression with stepwise AIC
+-KNN 
+-SVM (we use our already trained optimised models)
+-Classification tree (both categorical and numerical)
+-Linear Regression
+
+The trainings were all made on our balanced datasets.
+
+**RED Wine**
+
+```{r, echo = FALSE, include=TRUE, fig.width = 10, out.width = "90%"}
+grid.arrange(
+plot(varImp(R.varimp.lm), main = "Lin. Reg.", cex = 0.5, xlab=""),
+plot(varImp(R.varimp.knn),main = "KNN",cex.lab=0.5, xlab=""),
+plot(varImp(R.varimp.tree),main = "CTree - Binary",cex.main=0.5, xlab=""),
+nrow = 1, ncol=3, heights=2)
+
+grid.arrange(
+plot(varImp(R.varimp.treenum),main = "CTree - Numerical",cex.main=0.5, xlab=""),
+plot(varImp(R.svmrad.tune),main = "SVM Radial",cex.main=0.5, xlab=""),
+plot(varImp(R.varimp.glm),main = "Log.Reg. - Step AIC",cex.main=0.5),
+ nrow = 1, ncol=3, heights=2)
+``` 
+
+All the models agree on the importance of Alcohol, Sulphate and Volatile acidity and that pH, residual sugar and free sulfur are of very low importance in their predictions
+
+
+**WHITE WINE**
+
+```{r, echo = FALSE, include=TRUE, fig.width = 10, out.width = "90%"}
+grid.arrange(
+  plot(varImp(W.varimp.lm), main = "Lin.Reg.", xlab=""),
+  plot(varImp(W.varimp.knn),main = "KNN", xlab=""),
+  plot(varImp(W.varimp.tree),main = "CTree - Binary", xlab=""),  
+  nrow = 1, ncol=3, heights=2
+  )
+
+grid.arrange(
+  plot(varImp(W.varimp.treenum),main = "CTree - Numerical", xlab=""),
+  plot(varImp(W.svmpol.tune),main = "SVM Polynomial", xlab=""),
+  plot(varImp(W.varimp.glm),main = "Log.Reg. - Step AIC", xlab=""),
+  nrow = 1, ncol=3, heights=2
+)
+             
+``` 
+
+Unlike the Red wine dataset, Density jumps as an important factor along with alcohol and chlorides.
+On the other hand free sulfur, citric acid, and surprisingly sulphates, are of very low importance.
+
+Another important note is that the Linear regression model seems to be a bit alienated from the rest in both Red and White wine datasets. As it is the simplest, and most "crude" model, we believe that we can safely disregard that model.
